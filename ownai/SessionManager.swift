@@ -42,6 +42,14 @@ class SessionManager: ObservableObject {
         saveSessions()
     }
     
+    func renameSession(id: UUID, newTitle: String) {
+        if let index = sessions.firstIndex(where: { $0.id == id }) {
+            let trimmedTitle = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            sessions[index].title = trimmedTitle.isEmpty ? nil : trimmedTitle
+            saveSessions()
+        }
+    }
+    
     private func saveSessions() {
         if let encoded = try? JSONEncoder().encode(sessions) {
             UserDefaults.standard.set(encoded, forKey: sessionsKey)
@@ -69,8 +77,37 @@ struct ChatSession: Codable, Identifiable {
     let id: UUID
     var messages: [ChatMessage]
     let createdAt: Date
-    var title: String {
-        messages.first.map { String($0.content.prefix(30)) } ?? "New Chat"
+    var title: String?
+
+    var displayTitle: String {
+        title ?? (messages.first.map { String($0.content.prefix(30)) } ?? "New Chat")
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, messages, createdAt, title
+    }
+
+    init(id: UUID, messages: [ChatMessage], createdAt: Date, title: String? = nil) {
+        self.id = id
+        self.messages = messages
+        self.createdAt = createdAt
+        self.title = title
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        messages = try container.decode([ChatMessage].self, forKey: .messages)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(messages, forKey: .messages)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(title, forKey: .title)
     }
 }
 

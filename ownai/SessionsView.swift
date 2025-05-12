@@ -5,6 +5,10 @@ struct SessionsView: View {
     @Binding var showSessions: Bool
     @Environment(\.colorScheme) var colorScheme
     
+    // State for managing which session is being edited and its temporary title
+    @State private var editingSessionId: UUID? = nil
+    @State private var editingTitle: String = ""
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -27,18 +31,42 @@ struct SessionsView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(sessionManager.sessions) { session in
-                        SessionRow(session: session, isSelected: session.id == sessionManager.currentSessionId)
-                            .onTapGesture {
-                                sessionManager.loadSession(session.id)
-                                showSessions = false
+                        // Pass editing state to SessionRow
+                        SessionRow(
+                            session: session, 
+                            isSelected: session.id == sessionManager.currentSessionId, 
+                            isEditing: editingSessionId == session.id,
+                            editingTitle: $editingTitle,
+                            onBeginEditing: { // Closure to start editing
+                                editingSessionId = session.id
+                                editingTitle = session.title ?? "" // Or session.displayTitle if you prefer default as placeholder
+                            },
+                            onCommitEditing: { newTitle in // Closure to commit edit
+                                sessionManager.renameSession(id: session.id, newTitle: newTitle)
+                                editingSessionId = nil
                             }
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    sessionManager.deleteSession(session.id)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
+                        )
+                        .onTapGesture {
+                            if editingSessionId == session.id {
+                                // Already editing, do nothing on tap
+                                return
                             }
+                            sessionManager.loadSession(session.id)
+                            showSessions = false
+                        }
+                        .contextMenu {
+                            Button {
+                                editingSessionId = session.id
+                                editingTitle = session.title ?? "" // Or displayTitle
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                sessionManager.deleteSession(session.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
@@ -72,13 +100,37 @@ struct SessionsView: View {
 struct SessionRow: View {
     let session: ChatSession
     let isSelected: Bool
-    
+    let isEditing: Bool
+    @Binding var editingTitle: String
+    let onBeginEditing: () -> Void
+    let onCommitEditing: (String) -> Void
+
+    @FocusState private var isTextFieldFocused: Bool
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(session.title)
+                if isEditing {
+                    TextField("Session Name", text: $editingTitle, onCommit: {
+                        onCommitEditing(editingTitle)
+                    })
+                    .textFieldStyle(.plain)
                     .font(.system(size: 15, weight: .medium))
-                    .lineLimit(1)
+                    .focused($isTextFieldFocused)
+                    .onSubmit {
+                        onCommitEditing(editingTitle) // Also commit on Enter key
+                    }
+                    .onChange(of: isEditing) { _, newValue in // Focus when editing starts
+                        if newValue { isTextFieldFocused = true }
+                    }
+                } else {
+                    Text(session.displayTitle) // Use displayTitle here
+                        .font(.system(size: 15, weight: .medium))
+                        .lineLimit(1)
+                        .onTapGesture(count: 2) { // Double tap to edit
+                            onBeginEditing()
+                        }
+                }
                 Text(session.createdAt, style: .date)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
