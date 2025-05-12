@@ -111,7 +111,7 @@ struct ContentView: View {
                             Image(systemName: "gear")
                             Text("Configure Ollama")
                         }
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -343,12 +343,17 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
 struct CustomTextEditor: NSViewRepresentable {
     @Binding var text: String
     var onCommit: () -> Void
+    
+    // Read font size setting
+    @AppStorage("chatFontSize") private var chatFontSize: Double = Double(NSFont.systemFontSize(for: .regular))
+
     func makeNSView(context: Context) -> NSTextView {
         let textView = NSTextView()
         textView.isRichText = false
         textView.isEditable = true
         textView.isSelectable = true
-        textView.font = NSFont.systemFont(ofSize: 16)
+        // Apply user font size
+        textView.font = NSFont.systemFont(ofSize: CGFloat(chatFontSize))
         textView.backgroundColor = .clear
         textView.textContainerInset = NSSize(width: 6, height: 8)
         textView.delegate = context.coordinator
@@ -361,8 +366,16 @@ struct CustomTextEditor: NSViewRepresentable {
         return textView
     }
     func updateNSView(_ nsView: NSTextView, context: Context) {
+        let currentSize = nsView.font?.pointSize ?? NSFont.systemFontSize(for: .regular)
+        let newSize = CGFloat(chatFontSize)
+        
+        // Update text if different
         if nsView.string != text {
             nsView.string = text
+        }
+        // Update font size if different
+        if abs(currentSize - newSize) > 0.1 {
+             nsView.font = NSFont.systemFont(ofSize: newSize)
         }
     }
     func makeCoordinator() -> Coordinator {
@@ -430,98 +443,41 @@ struct VisualEffectBlur: NSViewRepresentable {
 }
 
 // MARK: - Chat Bubble View
+
+// Helper struct to represent parsed content segments
+struct ContentSegment: Identifiable {
+    let id = UUID()
+    enum SegmentType { case text, code(language: String) }
+    let type: SegmentType
+    let text: String
+}
+
 struct ChatBubble: View {
     let message: ChatMessage
     @State private var showCopyButton = false
-    
+    @State private var parsedSegments: [ContentSegment] = []
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             if message.sender == .model {
                 Image(systemName: "brain")
                     .font(.system(size: 16))
                     .foregroundStyle(.secondary)
-                    .frame(width: 24)
+                    .frame(width: 24, alignment: .top) // Align icon to top
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
-                switch message.contentType {
-                case .text:
-                    Text(message.content)
-                        .font(.system(size: 16))
-                        .textSelection(.enabled)
-                case .code(let language):
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(language)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            if showCopyButton {
-                                Button(action: {
-                                    NSPasteboard.general.clearContents()
-                                    NSPasteboard.general.setString(message.content, forType: .string)
-                                }) {
-                                    Image(systemName: "doc.on.doc")
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.top, 8)
-                        
-                        CodeBlock(content: message.content, language: language)
-                            .padding(.horizontal, 8)
-                            .padding(.bottom, 8)
-                    }
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .onHover { hovering in
-                        showCopyButton = hovering
-                    }
-                case .terminal:
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("Terminal")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            if showCopyButton {
-                                Button(action: {
-                                    NSPasteboard.general.clearContents()
-                                    NSPasteboard.general.setString(message.content, forType: .string)
-                                }) {
-                                    Image(systemName: "doc.on.doc")
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.top, 8)
-                        
-                        Text(message.content)
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.green)
-                            .padding(.horizontal, 8)
-                            .padding(.bottom, 8)
-                    }
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .onHover { hovering in
-                        showCopyButton = hovering
-                    }
-                case .markdown:
-                    MarkdownText(content: message.content)
-                        .textSelection(.enabled)
+                // Render parsed segments instead of just switching on contentType
+                ForEach(parsedSegments) { segment in
+                    renderSegment(segment)
                 }
-                
+
                 if let stats = message.stats {
                     Text(stats)
-                        .font(.system(size: 12))
+                        // Use .subheadline size
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .padding(.top, 2) // Add padding if stats exist
                 }
             }
             .padding(12)
@@ -536,150 +492,135 @@ struct ChatBubble: View {
                 AnimatedGradientBorder(cornerRadius: 16)
                 : nil
             )
-            
+
             if message.sender == .user {
                 Image(systemName: "person.circle.fill")
                     .font(.system(size: 16))
                     .foregroundStyle(.secondary)
-                    .frame(width: 24)
+                    .frame(width: 24, alignment: .top) // Align icon to top
             }
         }
         .padding(.horizontal, 4)
+        .onAppear {
+            parseContent()
+        }
+        .onChange(of: message.content) { _, _ in // Re-parse if content changes (streaming)
+            parseContent()
+        }
     }
-}
 
-// MARK: - Content Block Views
-struct TextBlockView: View {
-    let content: String
-    let sender: ChatSender
-    
-    var body: some View {
-        Text(content)
-            .font(.system(size: 16, weight: sender == .model ? .semibold : .regular))
-            .foregroundColor(sender == .user ? .primary : Color.primary.opacity(0.92))
-            .padding(10)
-            .background(sender == .user ? Color(NSColor.controlAccentColor).opacity(0.13) : Color(NSColor.textBackgroundColor).opacity(0.93))
-            .cornerRadius(9)
-    }
-}
+    // Helper view builder to render different segments
+    @ViewBuilder
+    private func renderSegment(_ segment: ContentSegment) -> some View {
+        switch segment.type {
+        case .text:
+            // Use MarkdownText for text segments to handle potential markdown outside code blocks
+            // Ensure text is not empty before rendering
+            if !segment.text.isEmpty {
+                MarkdownText(content: segment.text)
+                     .textSelection(.enabled)
+                     .padding(.bottom, parsedSegments.count > 1 ? 4 : 0) // Add spacing between segments
+            }
+        case .code(let language):
+            // Ensure code is not empty before rendering
+             if !segment.text.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(language.isEmpty ? "code" : language) // Display language
+                            // Use .subheadline size
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        if showCopyButton {
+                            Button(action: {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(segment.text, forType: .string) // Copy only the code
+                            }) {
+                                Image(systemName: "doc.on.doc")
+                                    // Use .subheadline size
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .transition(.opacity.animation(.easeInOut(duration: 0.2)))
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.top, 8)
 
-struct CodeBlockView: View {
-    let content: String
-    let language: String
-    @State private var isHovered = false
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(language)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button(action: {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(content, forType: .string)
-                }) {
-                    Image(systemName: "doc.on.doc")
-                        .foregroundColor(.secondary)
+                    // Pass font size explicitly (though CodeBlock reads AppStorage now,
+                    // this ensures consistency if that changes)
+                    CodeBlock(content: segment.text, language: language)
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
                 }
-                .buttonStyle(.plain)
-                .opacity(isHovered ? 1 : 0)
-            }
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
-            
-            CodeBlock(content: content, language: language)
-                .padding(10)
-                .background(Color(NSColor.textBackgroundColor).opacity(0.93))
-                .cornerRadius(7)
-        }
-        .background(Color(NSColor.textBackgroundColor).opacity(0.93))
-        .cornerRadius(9)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isHovered = hovering
-            }
+                .background(Color(NSColor.textBackgroundColor).opacity(0.8)) // Slightly different background for code
+                .clipShape(RoundedRectangle(cornerRadius: 8)) // Inner rounding for code block
+                .onHover { hovering in
+                     showCopyButton = hovering
+                }
+                 .padding(.bottom, parsedSegments.count > 1 ? 4 : 0) // Add spacing between segments
+             }
         }
     }
-}
 
-struct TerminalBlockView: View {
-    let content: String
-    @State private var isHovered = false
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("Terminal")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button(action: {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(content, forType: .string)
-                }) {
-                    Image(systemName: "doc.on.doc")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .opacity(isHovered ? 1 : 0)
-            }
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
-            
-            Text(content)
-                .font(.system(.body, design: .monospaced))
-                .foregroundColor(.green)
-                .padding(10)
-                .background(Color.black.opacity(0.93))
-                .cornerRadius(7)
-        }
-        .background(Color.black.opacity(0.93))
-        .cornerRadius(9)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isHovered = hovering
-            }
-        }
-    }
-}
 
-struct MarkdownBlockView: View {
-    let content: String
-    @State private var isHovered = false
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("Markdown")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button(action: {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(content, forType: .string)
-                }) {
-                    Image(systemName: "doc.on.doc")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .opacity(isHovered ? 1 : 0)
+    // Function to parse message content into segments
+    private func parseContent() {
+        var segments: [ContentSegment] = []
+        let content = message.content
+        let codeBlockRegex = try! NSRegularExpression(pattern: #"```(?:([\w-]+)\n)?(.*?)```"#, options: [.dotMatchesLineSeparators]) // Regex to find code blocks with optional language
+
+        var lastIndex = content.startIndex
+        codeBlockRegex.enumerateMatches(in: content, options: [], range: NSRange(content.startIndex..., in: content)) { match, _, _ in
+            guard let match = match, let matchRange = Range(match.range, in: content) else { return }
+
+            // 1. Add text segment before the code block
+            if matchRange.lowerBound > lastIndex {
+                let textSegment = String(content[lastIndex..<matchRange.lowerBound])
+                 if !textSegment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    segments.append(ContentSegment(type: .text, text: textSegment))
+                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
+
+            // 2. Add the code segment
+            let languageRange = match.range(at: 1)
+            let codeRange = match.range(at: 2)
+
+            let language = (languageRange.location != NSNotFound) ? (content as NSString).substring(with: languageRange) : ""
+            let code = (codeRange.location != NSNotFound) ? (content as NSString).substring(with: codeRange) : ""
             
-            MarkdownText(content: content)
-                .padding(10)
-                .background(Color(NSColor.textBackgroundColor).opacity(0.93))
-                .cornerRadius(7)
+            // Trim leading/trailing newlines from code often added by LLMs
+            let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+            segments.append(ContentSegment(type: .code(language: language.lowercased()), text: trimmedCode))
+
+
+            lastIndex = matchRange.upperBound
         }
-        .background(Color(NSColor.textBackgroundColor).opacity(0.93))
-        .cornerRadius(9)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isHovered = hovering
+
+        // 3. Add any remaining text segment after the last code block
+        if lastIndex < content.endIndex {
+            let textSegment = String(content[lastIndex...])
+            if !textSegment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                segments.append(ContentSegment(type: .text, text: textSegment))
             }
         }
+
+        // If no code blocks were found, treat the whole content as one segment
+        if segments.isEmpty {
+             // Determine type based on original message type (fallback)
+             switch message.contentType {
+                 case .code(let lang): // Should not happen if regex fails, but handle defensively
+                     segments.append(ContentSegment(type: .code(language: lang), text: content))
+                 case .terminal: // Treat terminal as pre-formatted text (could refine later)
+                      segments.append(ContentSegment(type: .code(language: "bash"), text: content)) // Render terminal as bash code
+                 case .markdown, .text:
+                      segments.append(ContentSegment(type: .text, text: content))
+             }
+        }
+
+
+        self.parsedSegments = segments
     }
 }
 

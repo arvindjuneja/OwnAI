@@ -3,6 +3,9 @@ import Down
 import Splash
 import AppKit // Needed for NSFont
 
+// Remove the global Paragraph Style, it will be created dynamically
+// let improvedParagraphStyle: NSParagraphStyle = ...
+
 struct MarkdownStyle {
     static let heading1 = Font.system(size: 24, weight: .bold)
     static let heading2 = Font.system(size: 20, weight: .bold)
@@ -39,18 +42,20 @@ class MarkdownRenderer {
 
 class AppSyntaxHighlighter {
     static let shared = AppSyntaxHighlighter()
-    private let highlighter: Splash.SyntaxHighlighter<AttributedStringOutputFormat>
-
-    init() {
-        let font = Splash.Font(size: 14)
+    // Note: Highlighter itself doesn't store font size;
+    // it's applied when generating the AttributedString or by the Text view.
+    // We will adjust the CodeBlock view to use the AppStorage font size.
+    private func createHighlighter(fontSize: CGFloat) -> Splash.SyntaxHighlighter<AttributedStringOutputFormat> {
+        let font = Splash.Font(size: fontSize)
         let theme = Theme.midnight(withFont: font)
         let format = AttributedStringOutputFormat(theme: theme)
-        self.highlighter = Splash.SyntaxHighlighter(format: format)
+        return Splash.SyntaxHighlighter(format: format)
     }
     
-    func highlight(_ code: String, language: String) -> AttributedString {
-        let highlighted = highlighter.highlight(code)
-        return AttributedString(highlighted)
+    func highlight(_ code: String, language: String, fontSize: CGFloat) -> AttributedString {
+        let highlighter = createHighlighter(fontSize: fontSize)
+        let highlightedNSAttributedString = highlighter.highlight(code)
+        return AttributedString(highlightedNSAttributedString)
     }
 }
 
@@ -58,21 +63,47 @@ struct MarkdownText: View {
     let content: String
     @State private var attributedContent: AttributedString?
     
+    // Read settings from AppStorage
+    @AppStorage("chatFontSize") private var chatFontSize: Double = Double(NSFont.systemFontSize(for: .regular))
+    @AppStorage("chatLineSpacing") private var chatLineSpacing: Double = 4.0
+    @AppStorage("chatParagraphSpacing") private var chatParagraphSpacing: Double = 8.0
+
     var body: some View {
         Group {
             if let attributed = attributedContent {
                 Text(attributed)
-                    .font(MarkdownStyle.body)
                     .foregroundColor(MarkdownStyle.bodyColor)
             } else {
                 Text(content)
-                    .font(MarkdownStyle.body)
+                    .font(.system(size: CGFloat(chatFontSize)))
                     .foregroundColor(MarkdownStyle.bodyColor)
             }
         }
-        .onAppear {
-            attributedContent = MarkdownRenderer.shared.render(content)
-        }
+        .onAppear { generateAttributedContent() }
+        .onChange(of: chatFontSize) { _, _ in generateAttributedContent() }
+        .onChange(of: chatLineSpacing) { _, _ in generateAttributedContent() }
+        .onChange(of: chatParagraphSpacing) { _, _ in generateAttributedContent() }
+    }
+    
+    private func generateAttributedContent() {
+        let rawAttributedString = MarkdownRenderer.shared.render(content)
+        let nsAttributedString = NSAttributedString(rawAttributedString)
+        let mutableAttributedString = NSMutableAttributedString(attributedString: nsAttributedString)
+        
+        let standardFont = NSFont.systemFont(ofSize: CGFloat(chatFontSize))
+        let fullRange = NSRange(location: 0, length: mutableAttributedString.length)
+        
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = CGFloat(chatLineSpacing)
+        paragraphStyle.paragraphSpacing = CGFloat(chatParagraphSpacing)
+
+        mutableAttributedString.removeAttribute(NSAttributedString.Key.font, range: fullRange)
+        mutableAttributedString.removeAttribute(NSAttributedString.Key.paragraphStyle, range: fullRange)
+        
+        mutableAttributedString.addAttribute(NSAttributedString.Key.font, value: standardFont, range: fullRange)
+        mutableAttributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: fullRange)
+        
+        attributedContent = AttributedString(mutableAttributedString)
     }
 }
 
@@ -81,19 +112,54 @@ struct CodeBlock: View {
     let language: String
     @State private var highlightedContent: AttributedString?
     
+    // Read settings from AppStorage
+    @AppStorage("chatFontSize") private var chatFontSize: Double = Double(NSFont.systemFontSize(for: .regular))
+    @AppStorage("chatLineSpacing") private var chatLineSpacing: Double = 4.0
+    @AppStorage("chatParagraphSpacing") private var chatParagraphSpacing: Double = 8.0
+
     var body: some View {
         Group {
             if let highlighted = highlightedContent {
                 Text(highlighted)
-                    .font(MarkdownStyle.code)
+                    // Font applied directly to Text for monospaced
+                    .font(.system(size: CGFloat(chatFontSize), design: .monospaced))
+                    // Line spacing is now part of the AttributedString
             } else {
+                // Fallback for non-highlighted content
                 Text(content)
-                    .font(MarkdownStyle.code)
+                    .font(.system(size: CGFloat(chatFontSize), design: .monospaced))
+                    .lineSpacing(CGFloat(chatLineSpacing)) // Apply directly here if not attributed
                     .foregroundColor(MarkdownStyle.codeColor)
             }
         }
-        .onAppear {
-            highlightedContent = AppSyntaxHighlighter.shared.highlight(content, language: language)
-        }
+        .onAppear { generateHighlightedContent() }
+        .onChange(of: chatFontSize) { _, _ in generateHighlightedContent() }
+        .onChange(of: chatLineSpacing) { _, _ in generateHighlightedContent() } // Regenerate on spacing change
+        .onChange(of: chatParagraphSpacing) { _, _ in generateHighlightedContent() } // Regenerate on spacing change
+    }
+    
+    private func generateHighlightedContent() {
+        // Get the highlighted string (which includes colors but base font)
+        let highlightedString = AppSyntaxHighlighter.shared.highlight(content, language: language, fontSize: CGFloat(chatFontSize))
+        
+        // Convert to NSAttributedString to apply paragraph style
+        let nsAttributedString = NSAttributedString(highlightedString)
+        let mutableAttributedString = NSMutableAttributedString(attributedString: nsAttributedString)
+        let fullRange = NSRange(location: 0, length: mutableAttributedString.length)
+
+        // Create paragraph style dynamically
+        let paragraphStyle = NSMutableParagraphStyle()
+        // For code, only line spacing usually makes sense, paragraph spacing can look odd.
+        // Let's apply only line spacing for now, but keep the variable read.
+        paragraphStyle.lineSpacing = CGFloat(chatLineSpacing)
+        // paragraphStyle.paragraphSpacing = CGFloat(chatParagraphSpacing) // Maybe omit for code?
+        
+        // Remove potentially conflicting paragraph styles from highlighter
+        mutableAttributedString.removeAttribute(NSAttributedString.Key.paragraphStyle, range: fullRange)
+        // Apply the desired paragraph style
+        mutableAttributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: fullRange)
+        
+        // Update the state
+        highlightedContent = AttributedString(mutableAttributedString)
     }
 } 
