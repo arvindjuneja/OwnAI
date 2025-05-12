@@ -8,28 +8,72 @@
 import SwiftUI
 
 // MARK: - Chat Message Model
-enum ChatSender {
+enum ChatSender: Equatable {
     case user, model
+}
+
+enum MessageContentType: Equatable {
+    case text
+    case code(language: String)
+    case terminal
+    case markdown
 }
 
 struct ChatMessage: Identifiable, Equatable {
     let id = UUID()
     let sender: ChatSender
     var content: String
-    let isCode: Bool
+    var contentType: MessageContentType
     let timestamp: Date
     var stats: String? = nil // For verbose/token stats
     var isStreaming: Bool = false // For animated border
+    
+    // Helper to detect content type from string
+    static func detectContentType(_ content: String) -> MessageContentType {
+        // Check for code blocks
+        if content.contains("```") {
+            let lines = content.components(separatedBy: .newlines)
+            for line in lines {
+                if line.hasPrefix("```") {
+                    let language = line.dropFirst(3).trimmingCharacters(in: .whitespaces)
+                    return .code(language: language.isEmpty ? "text" : language)
+                }
+            }
+        }
+        
+        // Check for terminal-like content
+        if content.contains("$ ") || content.contains("> ") || content.contains("PS ") {
+            return .terminal
+        }
+        
+        // Check for markdown
+        if content.contains("# ") || content.contains("* ") || content.contains("> ") {
+            return .markdown
+        }
+        
+        return .text
+    }
+    
+    // Implement Equatable
+    static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.sender == rhs.sender &&
+        lhs.content == rhs.content &&
+        lhs.contentType == rhs.contentType &&
+        lhs.timestamp == rhs.timestamp &&
+        lhs.stats == rhs.stats &&
+        lhs.isStreaming == rhs.isStreaming
+    }
 }
 
 struct ContentView: View {
     @AppStorage("ollamaAddress") private var ollamaAddress: String = "localhost"
     @AppStorage("ollamaPort") private var ollamaPort: String = "11434"
     @AppStorage("selectedModelName") private var selectedModelName: String = ""
-
-    @State private var chatMessages: [ChatMessage] = [
-        ChatMessage(sender: .model, content: "Hi! I'm OwnAI. How can I help you today?", isCode: false, timestamp: Date())
-    ]
+    @StateObject private var sessionManager = SessionManager()
+    @State private var showSettings = false
+    @State private var showSessions = false
+    @State private var chatMessages: [ChatMessage] = []
     @State private var prompt: String = ""
     @FocusState private var isPromptFocused: Bool
     @Namespace private var chatAnimation
@@ -44,6 +88,41 @@ struct ContentView: View {
                 .ignoresSafeArea()
             // Main chat area with rounded corners and shadow
             VStack(spacing: 0) {
+                // Top bar with settings and sessions buttons
+                HStack {
+                    Button(action: { showSessions = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                            Text("Chats")
+                        }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Spacer()
+                    
+                    Button(action: { showSettings = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "gear")
+                            Text("Configure Ollama")
+                        }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                
                 // Chat history
                 ScrollViewReader { scrollProxy in
                     ScrollView {
@@ -59,14 +138,14 @@ struct ContentView: View {
                         .padding(.horizontal, 20)
                     }
                     .background(Color.clear)
-                    .onChange(of: chatMessages.count) {
+                    .onChange(of: chatMessages.count) { oldCount, newCount in
                         if let last = chatMessages.last {
                             withAnimation(.easeOut(duration: 0.3)) {
                                 scrollProxy.scrollTo(last.id, anchor: .bottom)
                             }
                         }
                     }
-                    .onChange(of: chatMessages.last?.content) { _ in
+                    .onChange(of: chatMessages.last?.content) { oldContent, newContent in
                         if let last = chatMessages.last {
                             withAnimation(.linear(duration: 0.1)) {
                                 scrollProxy.scrollTo(last.id, anchor: .bottom)
@@ -120,7 +199,29 @@ struct ContentView: View {
             .shadow(color: .black.opacity(0.13), radius: 18, x: 0, y: 8)
             .padding(8)
         }
-        .onAppear { isPromptFocused = true }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+        }
+        .sheet(isPresented: $showSessions) {
+            SessionsView(sessionManager: sessionManager, showSessions: $showSessions)
+        }
+        .onAppear {
+            isPromptFocused = true
+            if sessionManager.currentSessionId == nil {
+                _ = sessionManager.createNewSession()
+            }
+            if let session = sessionManager.sessions.first(where: { $0.id == sessionManager.currentSessionId }) {
+                chatMessages = session.messages
+            }
+        }
+        .onChange(of: sessionManager.currentSessionId) { oldId, newId in
+            if let session = sessionManager.sessions.first(where: { $0.id == newId }) {
+                chatMessages = session.messages
+            }
+        }
+        .onChange(of: chatMessages) { oldMessages, newMessages in
+            sessionManager.saveSession(newMessages)
+        }
     }
     
     // MARK: - Send Prompt
@@ -128,7 +229,11 @@ struct ContentView: View {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         guard !selectedModelName.isEmpty else { return }
-        let userMsg = ChatMessage(sender: .user, content: trimmed, isCode: false, timestamp: Date())
+        
+        // Create user message with detected content type
+        let userContentType = ChatMessage.detectContentType(trimmed)
+        let userMsg = ChatMessage(sender: .user, content: trimmed, contentType: userContentType, timestamp: Date())
+        
         withAnimation {
             chatMessages.append(userMsg)
         }
@@ -154,7 +259,7 @@ struct ContentView: View {
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         // Add a streaming placeholder message
-        var streamingMsg = ChatMessage(sender: .model, content: "", isCode: false, timestamp: Date(), isStreaming: true)
+        var streamingMsg = ChatMessage(sender: .model, content: "", contentType: .text, timestamp: Date(), isStreaming: true)
         withAnimation {
             chatMessages.append(streamingMsg)
         }
@@ -175,6 +280,8 @@ struct ContentView: View {
             guard let idx = chatMessages.firstIndex(where: { $0.id == id }) else { return }
             if let content = content {
                 chatMessages[idx].content += content
+                // Update content type based on accumulated content
+                chatMessages[idx].contentType = ChatMessage.detectContentType(chatMessages[idx].content)
             }
             if let stats = stats {
                 chatMessages[idx].stats = stats
@@ -191,10 +298,13 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
     let update: (UUID, String?, String?, Bool) -> Void
     let streamingMsgID: UUID
     private var buffer = Data()
+    private var accumulatedContent = ""
+    
     init(update: @escaping (UUID, String?, String?, Bool) -> Void, streamingMsgID: UUID) {
         self.update = update
         self.streamingMsgID = streamingMsgID
     }
+    
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         buffer.append(data)
         while let range = buffer.range(of: "\n".data(using: .utf8)!) {
@@ -205,6 +315,7 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
             }
         }
     }
+    
     func processOllamaStreamChunk(_ line: String) {
         guard let data = line.data(using: .utf8) else { return }
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -219,6 +330,9 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
                 let statsString = [stats, speed].filter { !$0.isEmpty }.joined(separator: " | ")
                 update(streamingMsgID, nil, statsString, true)
             } else if let response = json["message"] as? [String: Any], let content = response["content"] as? String {
+                accumulatedContent += content
+                // Detect content type from accumulated content
+                let contentType = ChatMessage.detectContentType(accumulatedContent)
                 update(streamingMsgID, content, nil, false)
             }
         }
@@ -318,51 +432,254 @@ struct VisualEffectBlur: NSViewRepresentable {
 // MARK: - Chat Bubble View
 struct ChatBubble: View {
     let message: ChatMessage
+    @State private var showCopyButton = false
+    
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 12) {
             if message.sender == .model {
-                Image(systemName: "sparkles")
-                    .foregroundColor(.accentColor)
-                    .padding(.top, 2)
+                Image(systemName: "brain")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24)
             }
+            
             VStack(alignment: .leading, spacing: 4) {
-                if message.isCode {
+                switch message.contentType {
+                case .text:
                     Text(message.content)
-                        .font(.system(.body, design: .monospaced))
-                        .padding(10)
-                        .background(Color(NSColor.textBackgroundColor).opacity(0.93))
-                        .cornerRadius(7)
-                } else {
-                    Text(message.content)
-                        .font(.system(size: 16, weight: message.sender == .model ? .semibold : .regular))
-                        .foregroundColor(message.sender == .user ? .primary : Color.primary.opacity(0.92))
-                        .padding(10)
-                        .background(message.sender == .user ? Color(NSColor.controlAccentColor).opacity(0.13) : Color(NSColor.textBackgroundColor).opacity(0.93))
-                        .cornerRadius(9)
-                        .overlay(
-                            // Animated border if streaming
-                            message.isStreaming && message.sender == .model ? AnyView(AnimatedGradientBorder(cornerRadius: 9)) : AnyView(EmptyView())
-                        )
+                        .font(.system(size: 16))
+                        .textSelection(.enabled)
+                case .code(let language):
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(language)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            if showCopyButton {
+                                Button(action: {
+                                    NSPasteboard.general.clearContents()
+                                    NSPasteboard.general.setString(message.content, forType: .string)
+                                }) {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.top, 8)
+                        
+                        CodeBlock(content: message.content, language: language)
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 8)
+                    }
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .onHover { hovering in
+                        showCopyButton = hovering
+                    }
+                case .terminal:
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Terminal")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            if showCopyButton {
+                                Button(action: {
+                                    NSPasteboard.general.clearContents()
+                                    NSPasteboard.general.setString(message.content, forType: .string)
+                                }) {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.top, 8)
+                        
+                        Text(message.content)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 8)
+                    }
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .onHover { hovering in
+                        showCopyButton = hovering
+                    }
+                case .markdown:
+                    MarkdownText(content: message.content)
+                        .textSelection(.enabled)
                 }
-                if let stats = message.stats, message.sender == .model {
+                
+                if let stats = message.stats {
                     Text(stats)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 2)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 }
-                Text(message.timestamp, style: .time)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
             }
-            Spacer(minLength: 0)
+            .padding(12)
+            .background(
+                message.sender == .user
+                    ? AnyView(RoundedRectangle(cornerRadius: 16).fill(Color.accentColor.opacity(0.1)))
+                    : AnyView(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                message.isStreaming ?
+                AnimatedGradientBorder(cornerRadius: 16)
+                : nil
+            )
+            
             if message.sender == .user {
-                Image(systemName: "person.crop.circle")
-                    .foregroundColor(.gray)
-                    .padding(.top, 2)
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24)
             }
         }
-        .padding(.vertical, 2)
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 4)
+    }
+}
+
+// MARK: - Content Block Views
+struct TextBlockView: View {
+    let content: String
+    let sender: ChatSender
+    
+    var body: some View {
+        Text(content)
+            .font(.system(size: 16, weight: sender == .model ? .semibold : .regular))
+            .foregroundColor(sender == .user ? .primary : Color.primary.opacity(0.92))
+            .padding(10)
+            .background(sender == .user ? Color(NSColor.controlAccentColor).opacity(0.13) : Color(NSColor.textBackgroundColor).opacity(0.93))
+            .cornerRadius(9)
+    }
+}
+
+struct CodeBlockView: View {
+    let content: String
+    let language: String
+    @State private var isHovered = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(language)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button(action: {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(content, forType: .string)
+                }) {
+                    Image(systemName: "doc.on.doc")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .opacity(isHovered ? 1 : 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+            
+            CodeBlock(content: content, language: language)
+                .padding(10)
+                .background(Color(NSColor.textBackgroundColor).opacity(0.93))
+                .cornerRadius(7)
+        }
+        .background(Color(NSColor.textBackgroundColor).opacity(0.93))
+        .cornerRadius(9)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
+    }
+}
+
+struct TerminalBlockView: View {
+    let content: String
+    @State private var isHovered = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Terminal")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button(action: {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(content, forType: .string)
+                }) {
+                    Image(systemName: "doc.on.doc")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .opacity(isHovered ? 1 : 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+            
+            Text(content)
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(.green)
+                .padding(10)
+                .background(Color.black.opacity(0.93))
+                .cornerRadius(7)
+        }
+        .background(Color.black.opacity(0.93))
+        .cornerRadius(9)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
+    }
+}
+
+struct MarkdownBlockView: View {
+    let content: String
+    @State private var isHovered = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Markdown")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button(action: {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(content, forType: .string)
+                }) {
+                    Image(systemName: "doc.on.doc")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .opacity(isHovered ? 1 : 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+            
+            MarkdownText(content: content)
+                .padding(10)
+                .background(Color(NSColor.textBackgroundColor).opacity(0.93))
+                .cornerRadius(7)
+        }
+        .background(Color(NSColor.textBackgroundColor).opacity(0.93))
+        .cornerRadius(9)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
     }
 }
 

@@ -12,11 +12,10 @@ struct ownaiApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .background(WindowAccessor { window in
-                    window?.isOpaque = false
-                    window?.backgroundColor = .clear
-                })
+                .preferredColorScheme(.dark)
         }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
     }
 }
 
