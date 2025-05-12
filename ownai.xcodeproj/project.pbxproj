@@ -36,9 +36,22 @@
 		ED1E47222DD1CCB40059B681 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		ED1E472F2DD1F4BF0059B681 /* Exceptions for "ownai" folder in "ownai" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = ED1E46F02DD1CA070059B681 /* ownai */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ED1E46F32DD1CA070059B681 /* ownai */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				ED1E472F2DD1F4BF0059B681 /* Exceptions for "ownai" folder in "ownai" target */,
+			);
 			path = ownai;
 			sourceTree = "<group>";
 		};
