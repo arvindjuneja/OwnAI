@@ -7,33 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		ED1E47232DD1CCB40059B681 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED1E47222DD1CCB40059B681 /* SettingsView.swift */; };
-		ED1E47242DD1CCB40059B681 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED1E47222DD1CCB40059B681 /* SettingsView.swift */; };
-		ED1E47252DD1CCB40059B681 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED1E47222DD1CCB40059B681 /* SettingsView.swift */; };
+		ED1E47442DD1FF690059B681 /* Down in Frameworks */ = {isa = PBXBuildFile; productRef = ED1E47432DD1FF690059B681 /* Down */; };
+		ED1E47522DD204900059B681 /* Splash in Frameworks */ = {isa = PBXBuildFile; productRef = ED1E47512DD204900059B681 /* Splash */; };
+		ED1E47542DD204900059B681 /* SplashHTMLGen in Frameworks */ = {isa = PBXBuildFile; productRef = ED1E47532DD204900059B681 /* SplashHTMLGen */; };
+		ED1E47562DD204900059B681 /* SplashMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = ED1E47552DD204900059B681 /* SplashMarkdown */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		ED1E47002DD1CA090059B681 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = ED1E46E92DD1CA070059B681 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = ED1E46F02DD1CA070059B681;
-			remoteInfo = ownai;
-		};
-		ED1E470A2DD1CA090059B681 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = ED1E46E92DD1CA070059B681 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = ED1E46F02DD1CA070059B681;
-			remoteInfo = ownai;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		ED1E46F12DD1CA070059B681 /* ownai.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ownai.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		ED1E46FF2DD1CA090059B681 /* ownaiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ownaiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		ED1E47092DD1CA090059B681 /* ownaiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ownaiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		ED1E47222DD1CCB40059B681 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -72,20 +53,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		ED1E46FC2DD1CA090059B681 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		ED1E47062DD1CA090059B681 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
+				ED1E47562DD204900059B681 /* SplashMarkdown in Frameworks */,
+				ED1E47542DD204900059B681 /* SplashHTMLGen in Frameworks */,
+				ED1E47442DD1FF690059B681 /* Down in Frameworks */,
+				ED1E47522DD204900059B681 /* Splash in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -95,7 +66,6 @@
 		ED1E46E82DD1CA070059B681 = {
 			isa = PBXGroup;
 			children = (
-				ED1E47222DD1CCB40059B681 /* SettingsView.swift */,
 				ED1E46F32DD1CA070059B681 /* ownai */,
 				ED1E47022DD1CA090059B681 /* ownaiTests */,
 				ED1E470C2DD1CA090059B681 /* ownaiUITests */,
@@ -107,8 +77,6 @@
 			isa = PBXGroup;
 			children = (
 				ED1E46F12DD1CA070059B681 /* ownai.app */,
-				ED1E46FF2DD1CA090059B681 /* ownaiTests.xctest */,
-				ED1E47092DD1CA090059B681 /* ownaiUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -133,56 +101,14 @@
 			);
 			name = ownai;
 			packageProductDependencies = (
+				ED1E47432DD1FF690059B681 /* Down */,
+				ED1E47512DD204900059B681 /* Splash */,
+				ED1E47532DD204900059B681 /* SplashHTMLGen */,
+				ED1E47552DD204900059B681 /* SplashMarkdown */,
 			);
 			productName = ownai;
 			productReference = ED1E46F12DD1CA070059B681 /* ownai.app */;
 			productType = "com.apple.product-type.application";
-		};
-		ED1E46FE2DD1CA090059B681 /* ownaiTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = ED1E47162DD1CA090059B681 /* Build configuration list for PBXNativeTarget "ownaiTests" */;
-			buildPhases = (
-				ED1E46FB2DD1CA090059B681 /* Sources */,
-				ED1E46FC2DD1CA090059B681 /* Frameworks */,
-				ED1E46FD2DD1CA090059B681 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				ED1E47012DD1CA090059B681 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				ED1E47022DD1CA090059B681 /* ownaiTests */,
-			);
-			name = ownaiTests;
-			packageProductDependencies = (
-			);
-			productName = ownaiTests;
-			productReference = ED1E46FF2DD1CA090059B681 /* ownaiTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		ED1E47082DD1CA090059B681 /* ownaiUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = ED1E47192DD1CA090059B681 /* Build configuration list for PBXNativeTarget "ownaiUITests" */;
-			buildPhases = (
-				ED1E47052DD1CA090059B681 /* Sources */,
-				ED1E47062DD1CA090059B681 /* Frameworks */,
-				ED1E47072DD1CA090059B681 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				ED1E470B2DD1CA090059B681 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				ED1E470C2DD1CA090059B681 /* ownaiUITests */,
-			);
-			name = ownaiUITests;
-			packageProductDependencies = (
-			);
-			productName = ownaiUITests;
-			productReference = ED1E47092DD1CA090059B681 /* ownaiUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -200,14 +126,6 @@
 					ED1E46F02DD1CA070059B681 = {
 						CreatedOnToolsVersion = 16.3;
 					};
-					ED1E46FE2DD1CA090059B681 = {
-						CreatedOnToolsVersion = 16.3;
-						TestTargetID = ED1E46F02DD1CA070059B681;
-					};
-					ED1E47082DD1CA090059B681 = {
-						CreatedOnToolsVersion = 16.3;
-						TestTargetID = ED1E46F02DD1CA070059B681;
-					};
 				};
 			};
 			buildConfigurationList = ED1E46EC2DD1CA070059B681 /* Build configuration list for PBXProject "ownai" */;
@@ -219,34 +137,22 @@
 			);
 			mainGroup = ED1E46E82DD1CA070059B681;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				ED1E47422DD1FF690059B681 /* XCRemoteSwiftPackageReference "Down" */,
+				ED1E47502DD204900059B681 /* XCRemoteSwiftPackageReference "Splash" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ED1E46F22DD1CA070059B681 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				ED1E46F02DD1CA070059B681 /* ownai */,
-				ED1E46FE2DD1CA090059B681 /* ownaiTests */,
-				ED1E47082DD1CA090059B681 /* ownaiUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		ED1E46EF2DD1CA070059B681 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		ED1E46FD2DD1CA090059B681 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		ED1E47072DD1CA090059B681 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -260,40 +166,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ED1E47252DD1CCB40059B681 /* SettingsView.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		ED1E46FB2DD1CA090059B681 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				ED1E47232DD1CCB40059B681 /* SettingsView.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		ED1E47052DD1CA090059B681 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				ED1E47242DD1CCB40059B681 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		ED1E47012DD1CA090059B681 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = ED1E46F02DD1CA070059B681 /* ownai */;
-			targetProxy = ED1E47002DD1CA090059B681 /* PBXContainerItemProxy */;
-		};
-		ED1E470B2DD1CA090059B681 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = ED1E46F02DD1CA070059B681 /* ownai */;
-			targetProxy = ED1E470A2DD1CA090059B681 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		ED1E47112DD1CA090059B681 /* Debug */ = {
@@ -474,74 +350,6 @@
 			};
 			name = Release;
 		};
-		ED1E47172DD1CA090059B681 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6G22CJ5QTF;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oumm.ownaiTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ownai.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ownai";
-			};
-			name = Debug;
-		};
-		ED1E47182DD1CA090059B681 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6G22CJ5QTF;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oumm.ownaiTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ownai.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ownai";
-			};
-			name = Release;
-		};
-		ED1E471A2DD1CA090059B681 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6G22CJ5QTF;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oumm.ownaiUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = ownai;
-			};
-			name = Debug;
-		};
-		ED1E471B2DD1CA090059B681 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6G22CJ5QTF;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oumm.ownaiUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = ownai;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -563,25 +371,49 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		ED1E47162DD1CA090059B681 /* Build configuration list for PBXNativeTarget "ownaiTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				ED1E47172DD1CA090059B681 /* Debug */,
-				ED1E47182DD1CA090059B681 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		ED1E47192DD1CA090059B681 /* Build configuration list for PBXNativeTarget "ownaiUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				ED1E471A2DD1CA090059B681 /* Debug */,
-				ED1E471B2DD1CA090059B681 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		ED1E47422DD1FF690059B681 /* XCRemoteSwiftPackageReference "Down" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/johnxnguyen/Down.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+		ED1E47502DD204900059B681 /* XCRemoteSwiftPackageReference "Splash" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/johnsundell/Splash.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.16.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		ED1E47432DD1FF690059B681 /* Down */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ED1E47422DD1FF690059B681 /* XCRemoteSwiftPackageReference "Down" */;
+			productName = Down;
+		};
+		ED1E47512DD204900059B681 /* Splash */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ED1E47502DD204900059B681 /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = Splash;
+		};
+		ED1E47532DD204900059B681 /* SplashHTMLGen */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ED1E47502DD204900059B681 /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = SplashHTMLGen;
+		};
+		ED1E47552DD204900059B681 /* SplashMarkdown */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ED1E47502DD204900059B681 /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = SplashMarkdown;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = ED1E46E92DD1CA070059B681 /* Project object */;
 }

@@ -86,69 +86,73 @@ struct ContentView: View {
             // Glassmorphism background for the whole window
             VisualEffectBlur(material: .hudWindow, blendingMode: .withinWindow)
                 .ignoresSafeArea()
-            // Main chat area with rounded corners and shadow
+
+            // Parent VStack to push footer to bottom
             VStack(spacing: 0) {
-                // Top bar with settings and sessions buttons
-                HStack {
-                    Button(action: { showSessions = true }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                            Text("Chats")
+                // Main chat area VStack (copied from previous structure)
+                VStack(spacing: 0) {
+                    // Top bar with settings and sessions buttons
+                    HStack {
+                        Button(action: { showSessions = true }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "bubble.left.and.bubble.right.fill")
+                                Text("Chats")
+                            }
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
                         }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Spacer()
-                    
-                    Button(action: { showSettings = true }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "gear")
-                            Text("Configure Ollama")
+                        .buttonStyle(.plain)
+                        
+                        Spacer()
+                        
+                        Button(action: { showSettings = true }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "gear")
+                                Text("Configure Ollama")
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
                         }
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                
-                // Chat history
-                ScrollViewReader { scrollProxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            ForEach(chatMessages) { message in
-                                ChatBubble(message: message)
-                                    .id(message.id)
-                                    .transition(.move(edge: message.sender == .user ? .trailing : .leading).combined(with: .opacity))
-                                    .animation(.easeInOut(duration: 0.25), value: chatMessages)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                    
+                    // Chat history
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 12) {
+                                ForEach(chatMessages) { message in
+                                    ChatBubble(message: message)
+                                        .id(message.id)
+                                        .transition(.move(edge: message.sender == .user ? .trailing : .leading).combined(with: .opacity))
+                                        .animation(.easeInOut(duration: 0.25), value: chatMessages)
+                                }
                             }
                         }
                         .padding(.vertical, 16)
                         .padding(.horizontal, 20)
-                    }
-                    .background(Color.clear)
-                    .onChange(of: chatMessages.count) { oldCount, newCount in
-                        if let last = chatMessages.last {
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                scrollProxy.scrollTo(last.id, anchor: .bottom)
+                        .background(Color.clear)
+                        .onChange(of: chatMessages.count) { oldCount, newCount in
+                            if let last = chatMessages.last {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    scrollProxy.scrollTo(last.id, anchor: .bottom)
+                                }
                             }
                         }
-                    }
-                    .onChange(of: chatMessages.last?.content) { oldContent, newContent in
-                        if let last = chatMessages.last {
-                            withAnimation(.linear(duration: 0.1)) {
-                                scrollProxy.scrollTo(last.id, anchor: .bottom)
+                        .onChange(of: chatMessages.last?.content) { oldContent, newContent in
+                            if let last = chatMessages.last {
+                                withAnimation(.linear(duration: 0.1)) {
+                                    scrollProxy.scrollTo(last.id, anchor: .bottom)
+                                }
                             }
                         }
                     }
@@ -192,13 +196,23 @@ struct ContentView: View {
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
-            }
+
+                Spacer() // Pushes footer down within this VStack
+            
+                // Footer Text
+                Text("Made with ❤️ (and some GenAI) by Arvind Juneja")
+                    .font(.footnote)
+                    .foregroundColor(.secondary.opacity(0.7))
+                    .padding(.bottom, 8)
+
+            } // End Parent VStack
             .frame(minWidth: 480, idealWidth: 600, minHeight: 540, idealHeight: 700)
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .shadow(color: .black.opacity(0.13), radius: 18, x: 0, y: 8)
-            .padding(8)
-        }
+            .padding([.top, .horizontal], 8)
+
+        } // End ZStack
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
@@ -624,6 +638,6 @@ struct ChatBubble: View {
     }
 }
 
-#Preview {
-    ContentView()
-} 
+// #Preview {
+//     ContentView()
+// } 

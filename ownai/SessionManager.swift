@@ -82,7 +82,7 @@ extension ChatMessage: Codable {
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let id = try container.decode(UUID.self, forKey: .id)
+        let _ = try container.decode(UUID.self, forKey: .id)
         let sender = try container.decode(ChatSender.self, forKey: .sender)
         let content = try container.decode(String.self, forKey: .content)
         let contentType = try container.decode(MessageContentType.self, forKey: .contentType)

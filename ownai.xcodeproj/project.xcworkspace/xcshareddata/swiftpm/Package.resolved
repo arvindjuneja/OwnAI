@@ -1,0 +1,24 @@
+{
+  "originHash" : "e9a0870b04de84df2570487af23d5a6e30ed6f8b1aa7090f8df8030d83af5941",
+  "pins" : [
+    {
+      "identity" : "down",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/johnxnguyen/Down.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "e754ab1c80920dd51a8e08290c912ac1c2ac8b58"
+      }
+    },
+    {
+      "identity" : "splash",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/johnsundell/Splash.git",
+      "state" : {
+        "revision" : "7f4df436eb78fe64fe2c32c58006e9949fa28ad8",
+        "version" : "0.16.0"
+      }
+    }
+  ],
+  "version" : 3
+}
