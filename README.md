@@ -12,7 +12,11 @@
 </p>
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/TODO_YOUR_GITHUB_USERNAME/OwnAI/main/screenshots/app_preview.png" width="720" alt="OwnAI Preview"/>
+  <img src="assets/main.png" width="720" alt="OwnAI Main Interface"/>
+</p>
+
+<p align="center">
+  <img src="assets/pickmodel.png" width="400" alt="OwnAI Model Selection"/>
 </p>
 
 ## ✨ Features
