@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SessionsView: View {
     @ObservedObject var sessionManager: SessionManager
@@ -78,22 +79,42 @@ struct SessionsView: View {
             
             Divider()
             
-            // New chat button
-            Button(action: {
-                _ = sessionManager.createNewSession()
-                showSessions = false
-            }) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("New Chat")
+            // Footer buttons
+            HStack(spacing: 10) { // Use HStack for side-by-side buttons
+                // New chat button
+                Button(action: {
+                    _ = sessionManager.createNewSession()
+                    showSessions = false
+                }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("New Chat")
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(maxWidth: .infinity) // Let buttons share width
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .font(.system(size: 16, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .buttonStyle(.plain)
+
+                // ---> Add Import Session Button <--- 
+                Button(action: {
+                    importSession()
+                }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.down")
+                        Text("Import Session")
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(maxWidth: .infinity) // Let buttons share width
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                // ---> End Import Session Button <---
             }
-            .buttonStyle(.plain)
             .padding()
         }
         .frame(width: 300)
@@ -103,8 +124,32 @@ struct SessionsView: View {
 
     private func exportSession(session: ChatSession) {
         print("Attempting to export session: \(session.displayTitle)")
-        // TODO: Implement NSSavePanel and JSON serialization logic
         sessionManager.exportSessionToFile(session: session)
+    }
+    
+    private func importSession() {
+        print("SessionsView: importSession action triggered")
+
+        let openPanel = NSOpenPanel()
+        openPanel.canChooseFiles = true
+        openPanel.canChooseDirectories = false
+        openPanel.allowsMultipleSelection = false
+        openPanel.allowedContentTypes = [UTType.json] // Make sure UniformTypeIdentifiers is imported
+
+        openPanel.begin { result in
+            if result == .OK, let url = openPanel.url {
+                do {
+                    let jsonData = try Data(contentsOf: url)
+                    // Call the SessionManager to process this data
+                    sessionManager.processImportedSessionData(jsonData)
+                    // Optionally, close the sheet after initiating processing
+                    // showSessions = false 
+                } catch {
+                    print("SessionsView: Error reading file for import - \(error.localizedDescription)")
+                    // TODO: Show an alert to the user from the View
+                }
+            }
+        }
     }
 }
 
@@ -155,9 +200,9 @@ struct SessionRow: View {
                     .font(.system(size: 16))
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
-        .contentShape(Rectangle())
+        .padding(.vertical, 10)
+        .padding(.horizontal)
+        .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 } 

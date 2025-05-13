@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UniformTypeIdentifiers
 
 class SessionManager: ObservableObject {
     @Published var sessions: [ChatSession] = []
@@ -75,6 +76,67 @@ class SessionManager: ObservableObject {
             }
         }
     }
+    
+    // Renamed and refactored: This function now only handles the data processing part.
+    // The NSOpenPanel logic will be moved to the View.
+    func processImportedSessionData(_ jsonData: Data) {
+        print("SessionManager: processImportedSessionData called")
+        DispatchQueue.main.async { // Ensure all state updates are on the main thread
+            do {
+                let decoder = JSONDecoder()
+                let decodedSessionData = try decoder.decode(ChatSession.self, from: jsonData)
+                
+                let importedSession = ChatSession(
+                    id: UUID(),
+                    messages: decodedSessionData.messages,
+                    createdAt: decodedSessionData.createdAt,
+                    title: decodedSessionData.title
+                )
+                
+                self.sessions.append(importedSession)
+                self.currentSessionId = importedSession.id
+                self.saveSessions()
+                
+                print("Session processed and added successfully.")
+                 // TODO: Add a mechanism to inform the View of success/failure for user feedback
+
+            } catch {
+                print("Error processing imported session data: \(error.localizedDescription)")
+                // TODO: Show an alert to the user via some callback or published error property
+            }
+        }
+    }
+
+    // The old importSessionFromFile can be removed or kept if used elsewhere.
+    // For now, let's comment it out to avoid confusion as SessionsView will handle the panel.
+    /*
+    func importSessionFromFile() {
+        print("SessionManager: importSessionFromFile called")
+
+        let openPanel = NSOpenPanel()
+        openPanel.canChooseFiles = true
+        openPanel.canChooseDirectories = false
+        openPanel.allowsMultipleSelection = false
+        openPanel.allowedContentTypes = [UTType.json]
+
+        openPanel.begin { result in
+            if result == .OK,
+               let url = openPanel.url {
+                do {
+                    let jsonData = try Data(contentsOf: url)
+                    // Process the data using the new function
+                    self.processImportedSessionData(jsonData)
+                    print("Session imported successfully from \(url.path)") // This log might be redundant now
+
+                } catch {
+                     DispatchQueue.main.async {
+                        print("Error reading file for import: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    */
     
     private func saveSessions() {
         if let encoded = try? JSONEncoder().encode(sessions) {

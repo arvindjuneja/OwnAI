@@ -69,9 +69,24 @@ This document outlines the development plan for a macOS interface for local Olla
     *   [x] Save and load chat sessions (using SessionManager and UserDefaults)
     *   [x] Add session list view with selection and deletion (via context menu)
     *   [x] Add session naming and organization
-    *   [ ] Implement session export/import
-3.  **UI Polish:**
+    *   [x] Implement session export/import
+3.  **Codebase Refactoring for Clarity and Maintainability:**
+    *   **Goal:** Improve overall code structure by breaking down large files and organizing them into logical directories.
+    *   **Motivation:** The main `ownai/ownai/ContentView.swift` file had grown significantly. Other view and model definitions were also co-located. Separating distinct UI components, views, view helpers, and data models into their own files and organizing them into dedicated folders (e.g., `Views/`, `Models/`) enhances readability, maintainability, reusability, and makes the codebase easier to navigate. This also optimizes the context buffer when working with LLM-based coding assistants.
+    *   **Steps:**
+        1.  [x] Extracted `ContentSegment` and `ChatBubble` from `ContentView.swift` into `ownai/ownai/ChatBubble.swift`.
+        2.  [x] Extracted `CustomTextEditor`, `AnimatedGradientBorder`, and `VisualEffectBlur` from `ContentView.swift` into `ownai/ownai/ViewHelpers.swift`.
+        3.  [x] Created `ownai/ownai/Views/` directory.
+        4.  [x] Moved `ChatBubble.swift` to `ownai/ownai/Views/ChatBubble.swift`.
+        5.  [x] Moved `ViewHelpers.swift` to `ownai/ownai/Views/ViewHelpers.swift`.
+        6.  [x] Moved `SessionsView.swift` to `ownai/ownai/Views/SessionsView.swift`.
+        7.  [x] Moved `SettingsView.swift` to `ownai/ownai/Views/SettingsView.swift`.
+        8.  [x] Extract `ChatMessage`, `ChatSender`, `MessageContentType` (and Ollama API response structs from `SettingsView.swift`) into a new `Models/` directory with appropriate file(s) like `ChatMessage.swift` and `OllamaModels.swift`.
+        9.  [x] Verify project compilation and functionality post-refactoring.
+    *   [x] Complete the refactoring of `ContentView.swift` components and model definitions.
+4.  **UI Polish:**
     *   [ ] Refine dark mode colors and contrast
+    *   [ ] Add dynamic connection status indicator to top bar
     *   [ ] Add subtle animations for state changes
     *   [ ] Improve accessibility
     *   [ ] Add keyboard shortcuts for common actions 
@@ -99,6 +114,9 @@ This document outlines the development plan for a macOS interface for local Olla
     *   [ ] Export chats as Markdown
     *   [ ] Export chats as HTML
     *   [ ] Share chat links (if Ollama API supports)
+5.  **Window Management Enhancements:**
+    *   [ ] Implement "Stay on Top" functionality.
+    *   [ ] Explore feasibility of "Sidebar Docking" behavior for seamless desktop integration (experimental).
 
 ## Phase 5: Distribution & Polish
 
