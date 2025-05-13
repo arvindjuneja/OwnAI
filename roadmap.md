@@ -68,7 +68,7 @@ This document outlines the development plan for a macOS interface for local Olla
 2.  **Session Management:**
     *   [x] Save and load chat sessions (using SessionManager and UserDefaults)
     *   [x] Add session list view with selection and deletion (via context menu)
-    *   [ ] Add session naming and organization
+    *   [x] Add session naming and organization
     *   [ ] Implement session export/import
 3.  **UI Polish:**
     *   [ ] Refine dark mode colors and contrast

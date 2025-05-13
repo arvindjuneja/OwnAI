@@ -50,6 +50,32 @@ class SessionManager: ObservableObject {
         }
     }
     
+    func exportSessionToFile(session: ChatSession) {
+        // TODO: Implement NSSavePanel and JSON serialization logic
+        print("SessionManager: exportSessionToFile called for session ID \(session.id)")
+
+        let savePanel = NSSavePanel()
+        savePanel.canCreateDirectories = true
+        savePanel.showsTagField = false
+        savePanel.nameFieldStringValue = "\(session.displayTitle.filter { $0.isLetter || $0.isNumber || $0 == " " }).json" // Sanitize name
+        savePanel.level = .modalPanel
+        savePanel.begin { result in
+            if result == .OK,
+               let url = savePanel.url {
+                do {
+                    let encoder = JSONEncoder()
+                    encoder.outputFormatting = .prettyPrinted // For readability
+                    let jsonData = try encoder.encode(session)
+                    try jsonData.write(to: url)
+                    print("Session exported successfully to \(url.path)")
+                } catch {
+                    print("Error exporting session: \(error.localizedDescription)")
+                    // TODO: Show an alert to the user
+                }
+            }
+        }
+    }
+    
     private func saveSessions() {
         if let encoded = try? JSONEncoder().encode(sessions) {
             UserDefaults.standard.set(encoded, forKey: sessionsKey)

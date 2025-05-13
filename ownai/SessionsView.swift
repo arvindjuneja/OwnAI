@@ -57,9 +57,14 @@ struct SessionsView: View {
                         .contextMenu {
                             Button {
                                 editingSessionId = session.id
-                                editingTitle = session.title ?? "" // Or displayTitle
+                                editingTitle = session.title ?? ""
                             } label: {
                                 Label("Rename", systemImage: "pencil")
+                            }
+                            Button {
+                                exportSession(session: session)
+                            } label: {
+                                Label("Export Session...", systemImage: "square.and.arrow.up")
                             }
                             Button(role: .destructive) {
                                 sessionManager.deleteSession(session.id)
@@ -94,6 +99,12 @@ struct SessionsView: View {
         .frame(width: 300)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func exportSession(session: ChatSession) {
+        print("Attempting to export session: \(session.displayTitle)")
+        // TODO: Implement NSSavePanel and JSON serialization logic
+        sessionManager.exportSessionToFile(session: session)
     }
 }
 
