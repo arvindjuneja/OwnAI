@@ -86,10 +86,11 @@ This document outlines the development plan for a macOS interface for local Olla
     *   [x] Complete the refactoring of `ContentView.swift` components and model definitions.
 4.  **UI Polish:**
     *   [ ] Refine dark mode colors and contrast
-    *   [ ] Add dynamic connection status indicator to top bar
+    *   [ ] Refine Top Bar: Ensure clear display of connection status light, connected Ollama IP/address, and currently selected model.
+    *   [ ] Dynamic Connection Status Light: Ensure the status light in the top bar accurately reflects the connection state (e.g., green for connected, red for error, yellow for trying).
     *   [ ] Add subtle animations for state changes
     *   [ ] Improve accessibility
-    *   [ ] Add keyboard shortcuts for common actions 
+    *   [ ] Add keyboard shortcuts for common actions
     *   [ ] Add tooltips and help text
 
 ## Phase 4: Advanced Features
@@ -115,8 +116,32 @@ This document outlines the development plan for a macOS interface for local Olla
     *   [ ] Export chats as HTML
     *   [ ] Share chat links (if Ollama API supports)
 5.  **Window Management Enhancements:**
-    *   [ ] Implement "Stay on Top" functionality.
+    *   [x] Implement "Stay on Top" functionality.
+        *   *Learnings: Added `isFloating` to `WindowAccessor` and a `Toggle` in `SettingsView` to control `NSWindow.level`. Straightforward to implement for basic always-on-top behavior.*
     *   [ ] Explore feasibility of "Sidebar Docking" behavior for seamless desktop integration (experimental).
+        *   **Goal:** Allow the app to be optionally docked to the side of the screen, acting like a persistent sidebar.
+        *   **Steps:**
+            1.  **State Management for Sidebar Mode:**
+                *   [ ] Add a state variable (e.g., `@State private var isSidebarModeActive: Bool = false`) in `ContentView.swift`.
+                *   [ ] Consider `AppStorage` to persist sidebar mode state across launches.
+            2.  **UI Control for Toggling Sidebar Mode:**
+                *   [ ] Add a `Toggle` or `Button` in `SettingsView` (e.g., under "Window Behavior") or a dedicated button in the main UI to activate/deactivate sidebar mode.
+            3.  **Window Positioning and Resizing Logic:**
+                *   [x] Investigate and implement methods to get primary screen dimensions (width, height, available area excluding menu bar/Dock) using `NSScreen`.
+                *   [x] In `WindowAccessor` or a dedicated window management utility, add logic to:
+                    *   [x] Calculate the target frame (position and size) for the window when sidebar mode is activated (configurable width, edge snapping for left/right).
+                    *   [x] Apply the new frame and ensure "Stay on Top" (`.floating` level, respecting main toggle) when entering sidebar mode.
+                    *   [x] Restore the previous window frame (or a default) and window level when exiting sidebar mode.
+            4.  **Persisting/Restoring Window Frame:**
+                *   [x] Save the window's last non-sidebar frame when entering sidebar mode to restore it upon exit (using `@AppStorage` for `CGRect` components).
+                *   [x] Persist user-defined sidebar width: If the user resizes the sidebar, store this preferred width in `@AppStorage` and use it for subsequent sidebar sessions.
+            5.  **(Optional/Future) Compact UI for Sidebar Mode:**
+                *   [ ] Explore conditional UI changes in `ContentView.swift` for a more compact layout in sidebar mode.
+        *   *Learnings: (To be filled as implemented)*
+            *   *Initial thoughts: True automatic resizing of other apps is complex. This approach focuses on self-resizing, positioning, and "always on top" behavior. Users will manually arrange other windows alongside the sidebar.*
+            *   *`minWidth` constraint in SwiftUI's `.frame()` modifier on `ContentView` was critical to resolve content cropping when programmatically resizing the window to a narrow sidebar width.*
+            *   *Handling live window resizes (`window.inLiveResize`) and distinguishing between entering/exiting sidebar mode versus active sidebar resizing required careful state logic in `WindowAccessor` to prevent update loops and correctly persist user preferences for both normal window frame and sidebar width. Ensured `@AppStorage` updates occur on the main thread.*
+            *   *Relocated "Stay on Top" and "Sidebar Mode" toggles from Settings to main UI as icon buttons for better UX.*
 
 ## Phase 5: Distribution & Polish
 

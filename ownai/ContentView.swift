@@ -21,11 +21,32 @@ struct ContentView: View {
     @FocusState private var isPromptFocused: Bool
     @Namespace private var chatAnimation
     
+    @State private var stayOnTop: Bool = false
+    @AppStorage("isSidebarModeActive") private var isSidebarModeActive: Bool = false
+    
+    // AppStorage for persisting the last window frame before sidebar mode
+    @AppStorage("lastWindowX") private var lastWindowX: Double? // Using optional Double
+    @AppStorage("lastWindowY") private var lastWindowY: Double?
+    @AppStorage("lastWindowWidth") private var lastWindowWidth: Double?
+    @AppStorage("lastWindowHeight") private var lastWindowHeight: Double?
+    @AppStorage("preferredSidebarWidth") private var preferredSidebarWidth: Double? // Added for user's preferred sidebar width
+    
     // For streaming
     @State private var streamingSession: URLSession?
 
     var body: some View {
         ZStack {
+            // Add WindowAccessor here as a background element
+            WindowAccessor(callback: { _ in }, 
+                           isFloating: stayOnTop, 
+                           isSidebarModeActive: isSidebarModeActive,
+                           lastWindowX: $lastWindowX,
+                           lastWindowY: $lastWindowY,
+                           lastWindowWidth: $lastWindowWidth,
+                           lastWindowHeight: $lastWindowHeight,
+                           preferredSidebarWidth: $preferredSidebarWidth)
+                .frame(width: 0, height: 0) // Make it invisible and non-interactive
+            
             // Glassmorphism background for the whole window
             VisualEffectBlur(material: .hudWindow, blendingMode: .withinWindow)
                 .ignoresSafeArea()
@@ -70,6 +91,29 @@ struct ContentView: View {
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
                         .help("Configure Ollama")
+
+                        // Stay on Top Button
+                        Button(action: { stayOnTop.toggle() }) {
+                            Image(systemName: stayOnTop ? "pin.fill" : "pin.slash.fill")
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .help(stayOnTop ? "Disable Stay on Top" : "Enable Stay on Top")
+
+                        // Sidebar Mode Button
+                        Button(action: { isSidebarModeActive.toggle() }) {
+                            Image(systemName: isSidebarModeActive ? "sidebar.leading" : "sidebar.right") // Simplified icons
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .help(isSidebarModeActive ? "Exit Sidebar Mode" : "Enter Sidebar Mode")
+
                     }
                     .padding(.horizontal, 12) // Reduced horizontal padding for a tighter look
                     .padding(.top, 12)
@@ -167,7 +211,7 @@ struct ContentView: View {
                     .padding(.bottom, 8)
 
             } // End Parent VStack
-            .frame(minWidth: 480, idealWidth: 600, minHeight: 540, idealHeight: 700)
+            .frame(minWidth: 300, idealWidth: 600, minHeight: 540, idealHeight: 700)
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .shadow(color: .black.opacity(0.13), radius: 18, x: 0, y: 8)

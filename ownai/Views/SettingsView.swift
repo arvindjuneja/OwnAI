@@ -61,7 +61,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(minWidth: 480, idealWidth: 520, maxWidth: .infinity, minHeight: 450, idealHeight: 500, maxHeight: .infinity, alignment: .top)
+        .frame(minWidth: 480, idealWidth: 520, maxWidth: .infinity, minHeight: 580, idealHeight: 620, maxHeight: .infinity, alignment: .top)
         .onAppear {
             testConnection(fetchModelsOnSuccess: true)
         }
