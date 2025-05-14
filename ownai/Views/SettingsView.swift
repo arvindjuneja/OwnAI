@@ -61,7 +61,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(minWidth: 480, idealWidth: 520, maxWidth: .infinity, minHeight: 580, idealHeight: 620, maxHeight: .infinity, alignment: .top)
+        .frame(minWidth: 450, idealWidth: 480, maxWidth: .infinity, minHeight: 480, idealHeight: 520, maxHeight: .infinity, alignment: .top)
         .onAppear {
             testConnection(fetchModelsOnSuccess: true)
         }
@@ -70,17 +70,14 @@ struct SettingsView: View {
     var connectionSettingsTab: some View {
         Form {
             Section(header: Text("Connection Details").font(.headline)) {
-                HStack {
-                    Text("Server Address:")
-                    TextField("e.g., localhost or 192.168.1.10", text: $ollamaAddress)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                HStack {
-                    Text("Port:")
-                    TextField("e.g., 11434", text: $ollamaPort)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .frame(maxWidth: 100)
-                }
+                TextField("Server Address:", text: $ollamaAddress, prompt: Text("e.g., localhost or 192.168.1.10"))
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                
+                TextField("Port:", text: $ollamaPort, prompt: Text("e.g., 11434"))
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    // Optionally, constrain port field width if it becomes too wide by default
+                    // .frame(maxWidth: 100) 
+
                 HStack {
                     Button(action: {
                         connectToOllama()
@@ -103,6 +100,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Status:")
                         .fontWeight(.semibold)
+                    // Removed fixed width from Status label to let HStack manage alignment
                     Text(connectionStatus)
                         .foregroundColor(statusColor)
                         .lineLimit(1)
@@ -128,16 +126,13 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                         .padding(.vertical)
                 } else {
-                    HStack {
-                        Text("Selected Model:")
-                        Picker("", selection: $selectedModelName) {
-                            ForEach(availableModels) { model in
-                                Text(model.name).tag(model.name)
-                            }
+                    Picker("Selected Model:", selection: $selectedModelName) {
+                        ForEach(availableModels) { model in
+                            Text(model.name).tag(model.name)
                         }
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    // .labelsHidden() // Re-evaluate if this is needed after Form relayout
+                    // Removed frame modifiers to let Picker and Form manage width
                     .disabled(isFetchingModels)
                     
                     Text("Chat will use: \(selectedModelName.isEmpty ? "None selected" : selectedModelName)")
@@ -148,7 +143,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .padding(.vertical)
+        .padding()
     }
     
     var appearanceSettingsTab: some View {
@@ -167,7 +162,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .padding(.vertical)
+        .padding()
     }
 
     var statusColor: Color {

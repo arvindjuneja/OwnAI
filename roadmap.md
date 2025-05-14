@@ -50,7 +50,7 @@ This document outlines the development plan for a macOS interface for local Olla
     *   [x] Auto-scroll to the latest message as it streams
     *   *Learnings: Used URLSession with a custom delegate for streaming, handled chunked JSON, and ensured smooth UI updates and auto-scroll during streaming.*
 
-## Phase 3: Formatting, Copy, and Session Management (Current)
+## Phase 3: Formatting, Copy, and Session Management (Skipping for now)
 
 **Goal:** Add code/terminal formatting, copy features, and session management to enhance usability.
 
@@ -85,36 +85,36 @@ This document outlines the development plan for a macOS interface for local Olla
         9.  [x] Verify project compilation and functionality post-refactoring.
     *   [x] Complete the refactoring of `ContentView.swift` components and model definitions.
 4.  **UI Polish:**
-    *   [ ] Refine dark mode colors and contrast
-    *   [ ] Refine Top Bar: Ensure clear display of connection status light, connected Ollama IP/address, and currently selected model.
-    *   [ ] Dynamic Connection Status Light: Ensure the status light in the top bar accurately reflects the connection state (e.g., green for connected, red for error, yellow for trying).
-    *   [ ] Add subtle animations for state changes
-    *   [ ] Improve accessibility
-    *   [ ] Add keyboard shortcuts for common actions
-    *   [ ] Add tooltips and help text
+    *   [~] Refine dark mode colors and contrast
+    *   [~] Refine Top Bar: Ensure clear display of connection status light, connected Ollama IP/address, and currently selected model.
+    *   [~] Dynamic Connection Status Light: Ensure the status light in the top bar accurately reflects the connection state (e.g., green for connected, red for error, yellow for trying).
+    *   [~] Add subtle animations for state changes
+    *   [~] Improve accessibility
+    *   [~] Add keyboard shortcuts for common actions
+    *   [~] Add tooltips and help text
 
-## Phase 4: Advanced Features
+## Phase 4: Advanced Features (Skipping for now)
 
 **Goal:** Add advanced features and polish the user experience.
 
 **Steps:**
 
 1.  **Model Management:**
-    *   [ ] Add model download progress indicator
-    *   [ ] Show model details (size, last used, etc.)
-    *   [ ] Add model search/filtering
+    *   [~] Add model download progress indicator
+    *   [~] Show model details (size, last used, etc.)
+    *   [~] Add model search/filtering
 2.  **System Prompt Management:**
-    *   [ ] Add system prompt editor
-    *   [ ] Save and load custom system prompts
-    *   [ ] Add prompt templates
+    *   [~] Add system prompt editor
+    *   [~] Save and load custom system prompts
+    *   [~] Add prompt templates
 3.  **Advanced Settings:**
-    *   [ ] Add temperature and other model parameters
-    *   [ ] Add context window size control
-    *   [ ] Add streaming speed control
+    *   [~] Add temperature and other model parameters
+    *   [~] Add context window size control
+    *   [~] Add streaming speed control
 4.  **Export & Sharing:**
-    *   [ ] Export chats as Markdown
-    *   [ ] Export chats as HTML
-    *   [ ] Share chat links (if Ollama API supports)
+    *   [~] Export chats as Markdown
+    *   [~] Export chats as HTML
+    *   [~] Share chat links (if Ollama API supports)
 5.  **Window Management Enhancements:**
     *   [x] Implement "Stay on Top" functionality.
         *   *Learnings: Added `isFloating` to `WindowAccessor` and a `Toggle` in `SettingsView` to control `NSWindow.level`. Straightforward to implement for basic always-on-top behavior.*
@@ -136,16 +136,17 @@ This document outlines the development plan for a macOS interface for local Olla
                 *   [x] Save the window's last non-sidebar frame when entering sidebar mode to restore it upon exit (using `@AppStorage` for `CGRect` components).
                 *   [x] Persist user-defined sidebar width: If the user resizes the sidebar, store this preferred width in `@AppStorage` and use it for subsequent sidebar sessions.
             5.  **(Optional/Future) Compact UI for Sidebar Mode:**
-                *   [ ] Explore conditional UI changes in `ContentView.swift` for a more compact layout in sidebar mode.
+                *   [~] Explore conditional UI changes in `ContentView.swift` for a more compact layout in sidebar mode.
         *   *Learnings: (To be filled as implemented)*
             *   *Initial thoughts: True automatic resizing of other apps is complex. This approach focuses on self-resizing, positioning, and "always on top" behavior. Users will manually arrange other windows alongside the sidebar.*
             *   *`minWidth` constraint in SwiftUI's `.frame()` modifier on `ContentView` was critical to resolve content cropping when programmatically resizing the window to a narrow sidebar width.*
             *   *Handling live window resizes (`window.inLiveResize`) and distinguishing between entering/exiting sidebar mode versus active sidebar resizing required careful state logic in `WindowAccessor` to prevent update loops and correctly persist user preferences for both normal window frame and sidebar width. Ensured `@AppStorage` updates occur on the main thread.*
             *   *Relocated "Stay on Top" and "Sidebar Mode" toggles from Settings to main UI as icon buttons for better UX.*
 
-## Phase 5: Distribution & Polish
+## Phase 5: Distribution & Polish (Current)
 
 **Goal:** Prepare the application for distribution and add final polish.
+*Note: Skipping some Phase 3 & 4 features to prioritize App Store submission for testers.*
 
 **Steps:**
 
