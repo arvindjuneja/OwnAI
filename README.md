@@ -69,6 +69,7 @@ OwnAI brings a clean, native macOS interface to [Ollama](https://ollama.ai) inst
 
 OwnAI is under active development. Upcoming features include:
 
+- [ ] Onboarding splash screen to clarify app dependencies (Ollama server)
 - [ ] Local network scanning for Ollama instances
 - [ ] System prompt customization
 - [ ] Model management (pull/remove models directly from UI)

@@ -13,6 +13,7 @@ struct ContentView: View {
     @AppStorage("ollamaAddress") private var ollamaAddress: String = "localhost"
     @AppStorage("ollamaPort") private var ollamaPort: String = "11434"
     @AppStorage("selectedModelName") private var selectedModelName: String = ""
+    @AppStorage("connectionStatus") private var connectionStatus: String = "Disconnected" // Added to read shared status
     @StateObject private var sessionManager = SessionManager()
     @State private var showSettings = false
     @State private var showSessions = false
@@ -59,7 +60,7 @@ struct ContentView: View {
                     HStack {
                         // Connection status and model info
                         Image(systemName: "circle.fill") // Placeholder for status light
-                            .foregroundColor(.green) // Static green for now
+                            .foregroundColor(currentStatusColor) // Changed to dynamic color
                             .font(.caption)
                         Text("\(ollamaAddress) / \(selectedModelName.isEmpty ? "---" : selectedModelName)")
                             .font(.caption)
@@ -232,10 +233,25 @@ struct ContentView: View {
             if let session = sessionManager.sessions.first(where: { $0.id == sessionManager.currentSessionId }) {
                 chatMessages = session.messages
             }
+            // Ensure connectionStatus is re-evaluated on appear if needed, or rely on SettingsView to update it.
+            // If SettingsView is not shown on first launch, connectionStatus might be stale from a previous session.
+            // For now, we assume SettingsView will update it on its onAppear.
         }
         .onChange(of: chatMessages) { oldMessages, newMessages in
             sessionManager.saveSession(newMessages)
         }
+    }
+    
+    // Computed property for status color based on shared connectionStatus
+    private var currentStatusColor: Color {
+        if connectionStatus.starts(with: "Connected") {
+            return .green
+        } else if connectionStatus.starts(with: "Error") || connectionStatus == "Disconnected" {
+            return .red
+        } else if connectionStatus.starts(with: "Checking") || connectionStatus.contains("Fetching models") {
+            return .yellow // Or .orange
+        }
+        return .gray // Default for unknown states
     }
     
     // MARK: - Send Prompt
@@ -257,7 +273,11 @@ struct ContentView: View {
 
     // MARK: - Ollama API Integration & Streaming
     func sendToOllama(prompt: String) {
-        let urlString = "http://\(ollamaAddress):\(ollamaPort)/api/chat"
+        var effectiveAddress = ollamaAddress
+        if effectiveAddress.lowercased() == "localhost" {
+            effectiveAddress = "127.0.0.1"
+        }
+        let urlString = "http://\(effectiveAddress):\(ollamaPort)/api/chat"
         guard let url = URL(string: urlString) else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

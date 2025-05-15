@@ -7,15 +7,60 @@
 
 import SwiftUI
 
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system = "System"
+    case light = "Light"
+    case dark = "Dark"
+    var id: String { self.rawValue }
+}
+
 @main
-struct ownaiApp: App {
+struct OwnAIApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject var sessionManager = SessionManager()
+    @StateObject var ollamaService = OllamaService()
+    @AppStorage("selectedModel") var selectedModel: String?
+    @AppStorage("ollamaServerAddress") private var ollamaServerAddress: String = "http://localhost:11434"
+    @AppStorage("hideOnboarding") private var hideOnboarding: Bool = false
+    @AppStorage("hasLaunchedBefore") private var hasLaunchedBefore: Bool = false
+    @AppStorage("preferredAppearance_v1") private var preferredAppearance: AppearanceMode = .dark // Default to dark
+
+    @State private var showOnboardingSheet: Bool = false
+
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .preferredColorScheme(.dark)
+                .environmentObject(sessionManager)
+                .environmentObject(ollamaService)
+                .preferredColorScheme(colorSchemeFor(preferredAppearance))
+                .onAppear {
+                    if !hasLaunchedBefore {
+                        showOnboardingSheet = true
+                        hasLaunchedBefore = true
+                    } else if !hideOnboarding {
+                        showOnboardingSheet = true
+                    }
+                }
+                .sheet(isPresented: $showOnboardingSheet) {
+                    OnboardingFlowManagerView()
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
+        .commands {
+            // ... existing code ...
+        }
+    }
+    
+    private func colorSchemeFor(_ appearance: AppearanceMode) -> ColorScheme? {
+        switch appearance {
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        case .system:
+            return nil // Using nil for system appearance
+        }
     }
 }
 

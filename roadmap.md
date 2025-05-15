@@ -50,6 +50,36 @@ This document outlines the development plan for a macOS interface for local Olla
     *   [x] Auto-scroll to the latest message as it streams
     *   *Learnings: Used URLSession with a custom delegate for streaming, handled chunked JSON, and ensured smooth UI updates and auto-scroll during streaming.*
 
+## New Phase: Onboarding Experience
+
+**Goal:** Guide new users and clarify app dependencies (Ollama server) to prevent confusion and improve first-time experience, especially for App Store review.
+
+**Steps:**
+
+1.  **Design Onboarding UI/UX:**
+    *   [ ] Finalize text and layout for each of the three onboarding screens.
+    *   [ ] Ensure a clear and concise message on each screen.
+    *   [ ] Include the Ollama installation link: `https://bit.ly/ownaiollama`
+2.  **Create SwiftUI Views for Onboarding Screens:**
+    *   [ ] Implement `OnboardingScreen1View.swift`: "OwnAI - Your local AI inference client".
+    *   [ ] Implement `OnboardingScreen2View.swift`: Explaining the need for an LLM server like Ollama and the "Connection Error" consequence.
+    *   [ ] Implement `OnboardingScreen3View.swift`: Information on local/network instances, admin help, and a "Hide on startup" checkbox.
+3.  **Implement Onboarding Flow Logic:**
+    *   [ ] Create `OnboardingFlowManagerView.swift` to manage the sequence of onboarding screens.
+    *   [ ] Implement navigation (e.g., "Next", "Done") between screens.
+4.  **"Hide on Startup" Functionality:**
+    *   [ ] Use `@AppStorage` or `UserDefaults` to store the user's preference from the checkbox on Screen 3.
+    *   [ ] Ensure this preference is respected on subsequent app launches.
+5.  **Conditional Presentation Logic:**
+    *   [ ] In the main app entry point (e.g., `OwnAIApp.swift` or `ContentView.swift`), add logic to determine if the onboarding flow should be displayed.
+    *   [ ] Show onboarding on the very first launch.
+    *   [ ] Subsequently, show onboarding only if the "Hide on startup" preference is NOT set.
+    *   [ ] Present the `OnboardingFlowManagerView` (e.g., as a modal sheet or full-screen cover).
+6.  **Testing & Refinement:**
+    *   [ ] Test the onboarding flow thoroughly on first launch and subsequent launches with different "Hide on startup" states.
+    *   [ ] Ensure the UI is responsive and looks good on different screen sizes/resolutions.
+    *   [ ] Verify the Ollama link works as expected.
+
 ## Phase 3: Formatting, Copy, and Session Management (Skipping for now)
 
 **Goal:** Add code/terminal formatting, copy features, and session management to enhance usability.
@@ -92,6 +122,15 @@ This document outlines the development plan for a macOS interface for local Olla
     *   [~] Improve accessibility
     *   [~] Add keyboard shortcuts for common actions
     *   [~] Add tooltips and help text
+
+## Phase 3: UI/UX Enhancements (Ongoing)
+
+**Goal:** Add additional UI/UX enhancements to improve the user experience.
+
+**Steps:**
+
+1.  **Add Appearance Toggle (Light/Dark/System) in Settings:**
+    *   [ ] Add Appearance Toggle (Light/Dark/System) in Settings
 
 ## Phase 4: Advanced Features (Skipping for now)
 

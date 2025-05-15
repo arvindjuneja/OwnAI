@@ -9,15 +9,22 @@ struct SettingsView: View {
     @AppStorage("ollamaPort") private var ollamaPort: String = "11434"
     @AppStorage("selectedModelName") private var selectedModelName: String = ""
     
-    @State private var connectionStatus: String = "Disconnected"
+    @AppStorage("connectionStatus") private var connectionStatus: String = "Disconnected"
     @State private var isTestingConnection: Bool = false
     @State private var availableModels: [OllamaModel] = []
     @State private var isFetchingModels: Bool = false
+    @State private var ollamaVersion: String?
+    @State private var hasUnappliedChanges: Bool = false
+    @State private var testConnectionTask: URLSessionDataTask? // Task for testConnection
+    @State private var fetchModelsTask: URLSessionDataTask?    // Task for fetchModels
 
     // Font size settings
     @AppStorage("chatFontSize") private var chatFontSize: Double = Double(NSFont.systemFontSize(for: .regular))
     @AppStorage("codeFontSize") private var codeFontSize: Double = Double(NSFont.systemFontSize(for: .regular))
     @AppStorage("lineSpacing") private var lineSpacing: Double = 5.0
+
+    // Appearance setting
+    @AppStorage("preferredAppearance_v1") private var preferredAppearance: AppearanceMode = .dark
 
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -72,38 +79,42 @@ struct SettingsView: View {
             Section(header: Text("Connection Details").font(.headline)) {
                 TextField("Server Address:", text: $ollamaAddress, prompt: Text("e.g., localhost or 192.168.1.10"))
                     .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .onSubmit { connectToOllama() }
+                    .onChange(of: ollamaAddress) { oldValue, newValue in handleAddressOrPortChange() }
                 
                 TextField("Port:", text: $ollamaPort, prompt: Text("e.g., 11434"))
                     .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .onSubmit { connectToOllama() }
+                    .onChange(of: ollamaPort) { oldValue, newValue in handleAddressOrPortChange() }
                     // Optionally, constrain port field width if it becomes too wide by default
                     // .frame(maxWidth: 100) 
 
                 HStack {
                     Button(action: {
-                        connectToOllama()
+                        if connectionStatus.starts(with: "Connected") {
+                            disconnectOllama()
+                        } else {
+                            connectToOllama()
+                        }
                     }) {
-                        Text("Save & Connect")
+                        Text(primaryButtonLabel)
+                            .foregroundColor( (primaryButtonLabel == "Connecting...") ? nil : .white )
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isTestingConnection || isFetchingModels)
                     
                     Spacer()
                     
-                    Button(action: {
-                        testConnection(fetchModelsOnSuccess: true)
-                    }) {
-                        Text(isTestingConnection ? "Testing..." : "Test Connection")
-                    }
-                    .disabled(isTestingConnection || isFetchingModels)
+                    // "Test Connection" button removed
                 }
                 
                 HStack {
                     Text("Status:")
                         .fontWeight(.semibold)
-                    // Removed fixed width from Status label to let HStack manage alignment
                     Text(connectionStatus)
                         .foregroundColor(statusColor)
-                        .lineLimit(1)
+                        .lineLimit(nil)
+                        .frame(minHeight: 30)
                         .truncationMode(.tail)
                     if isTestingConnection || isFetchingModels {
                         ProgressView().scaleEffect(0.7).padding(.leading, 5)
@@ -148,6 +159,14 @@ struct SettingsView: View {
     
     var appearanceSettingsTab: some View {
         Form {
+            Section(header: Text("Theme").font(.headline)) {
+                Picker("Appearance:", selection: $preferredAppearance) {
+                    ForEach(AppearanceMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented) // Or .automatic / .menu
+            }
             Section(header: Text("Font Sizes").font(.headline)) {
                 Slider(value: $chatFontSize, in: 10...24, step: 1) {
                     Text("Chat Text Font Size: \(Int(chatFontSize))pt")
@@ -165,6 +184,21 @@ struct SettingsView: View {
         .padding()
     }
 
+    // Computed property for the primary button's label
+    private var primaryButtonLabel: String {
+        if isTestingConnection || isFetchingModels {
+            return "Connecting..."
+        } else if hasUnappliedChanges {
+            return "Connect"
+        } else if connectionStatus.starts(with: "Connected") {
+            return "Disconnect"
+        } else if connectionStatus.starts(with: "Error") {
+            return "Try Again"
+        } else { // Covers "Disconnected" and any other initial/unknown states
+            return "Connect"
+        }
+    }
+
     var statusColor: Color {
         if connectionStatus.starts(with: "Connected") { return .green }
         if connectionStatus.starts(with: "Error") || connectionStatus == "Disconnected" { return .red }
@@ -176,48 +210,77 @@ struct SettingsView: View {
     }
 
     func testConnection(fetchModelsOnSuccess: Bool = false) {
-        guard !isTestingConnection else { return }
+        testConnectionTask?.cancel() // Cancel any existing test connection task
+        fetchModelsTask?.cancel()    // Also cancel model fetching if it was somehow active
+        
+        guard !isTestingConnection else { return } // Should be redundant if task logic is correct, but safe
         isTestingConnection = true
-        connectionStatus = "Checking http://\(ollamaAddress.trimmingCharacters(in: .whitespacesAndNewlines)):\(ollamaPort.trimmingCharacters(in: .whitespacesAndNewlines))..."
+        hasUnappliedChanges = false // Attempting to apply changes now
+        ollamaVersion = nil // Reset stored version
+        
+        let rawUserAddress = ollamaAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawUserPort = ollamaPort.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var addressForConnection = rawUserAddress
+        if addressForConnection.lowercased() == "localhost" {
+            addressForConnection = "127.0.0.1" // Force IPv4 for localhost
+        }
+
+        connectionStatus = "Checking \(rawUserAddress):\(rawUserPort)..."
         availableModels = [] // Clear models on new test
 
-        let trimmedAddress = ollamaAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedPort = ollamaPort.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedAddress.isEmpty else {
+        guard !rawUserAddress.isEmpty else {
             self.connectionStatus = "Error: Server address cannot be empty."
             isTestingConnection = false
             return
         }
-        guard let portInt = Int(trimmedPort), portInt > 0 && portInt <= 65535 else {
+        
+        guard let portForConnection = Int(rawUserPort), portForConnection > 0 && portForConnection <= 65535 else {
             self.connectionStatus = "Error: Invalid port number."
             isTestingConnection = false
             return
         }
         
-        guard var components = URLComponents(string: "http://\(trimmedAddress)") else {
-            self.connectionStatus = "Error: Invalid server address format."
+        var urlStringForComponents: String
+        if addressForConnection.lowercased().hasPrefix("http://") || addressForConnection.lowercased().hasPrefix("https://") {
+            urlStringForComponents = addressForConnection
+        } else {
+            urlStringForComponents = "http://" + addressForConnection // Default to http
+        }
+        
+        guard var components = URLComponents(string: urlStringForComponents) else {
+            self.connectionStatus = "Error: Invalid server address format. Ensure it's a valid hostname or IP, optionally prefixed with http:// or https://."
             isTestingConnection = false
             return
         }
-        components.port = portInt
+        
+        components.port = portForConnection // Always use the port from the dedicated field
         components.path = "/api/version"
 
         guard let url = components.url else {
-            self.connectionStatus = "Error: Could not construct URL."
+            self.connectionStatus = "Error: Could not construct final URL."
             isTestingConnection = false
             return
         }
+
+        // Status message updated just before the request
+        let schemeString = components.scheme ?? "http"
+        let hostString = components.host ?? rawUserAddress
+        let portString = components.port.map { String($0) } ?? rawUserPort
+        let attemptID = String(UUID().uuidString.prefix(4))
+        connectionStatus = "Checking (#\(attemptID)) \(schemeString)://\(hostString):\(portString)..."
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = 5 // 5 seconds timeout
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
-                isTestingConnection = false
+                self.testConnectionTask = nil // Clear task reference in completion
+                self.isTestingConnection = false // Ensure this is also set in completion
                 if let error = error {
-                    self.connectionStatus = "Error: \(error.localizedDescription)"
+                    let nsError = error as NSError
+                    self.connectionStatus = formatErrorMessage(nsError)
                     return
                 }
                 guard let httpResponse = response as? HTTPURLResponse else {
@@ -237,9 +300,14 @@ struct SettingsView: View {
                 }
                 do {
                     let decodedResponse = try JSONDecoder().decode(OllamaVersionResponse.self, from: data)
-                    self.connectionStatus = "Connected to Ollama v\(decodedResponse.version)"
+                    let version = decodedResponse.version
+                    self.ollamaVersion = version
+                    
                     if fetchModelsOnSuccess {
+                        self.connectionStatus = "Connected to Ollama v\(version). Fetching models..."
                         fetchModels()
+                    } else {
+                        self.connectionStatus = "Connected to Ollama v\(version)."
                     }
                 } catch {
                     self.connectionStatus = "Error: Could not decode server version response."
@@ -249,24 +317,46 @@ struct SettingsView: View {
     }
 
     func fetchModels() {
-        guard !isFetchingModels else { return }
+        fetchModelsTask?.cancel() // Cancel any existing fetch models task
+
+        guard !isFetchingModels else { return } // Should be redundant, but safe
         isFetchingModels = true
         
-        let trimmedAddress = ollamaAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedPort = ollamaPort.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawUserAddress = ollamaAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawUserPort = ollamaPort.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var addressForConnection = rawUserAddress
+        if addressForConnection.lowercased() == "localhost" {
+            addressForConnection = "127.0.0.1" // Force IPv4 for localhost
+        }
         
-        guard !trimmedAddress.isEmpty, let portInt = Int(trimmedPort) else {
-            connectionStatus = "Error: Invalid server address or port for fetching models."
+        guard !rawUserAddress.isEmpty else {
+            // This state should ideally be caught by testConnection first, but as a safeguard:
+            connectionStatus = "Error: Server address cannot be empty for fetching models."
             isFetchingModels = false
             return
         }
         
-        guard var components = URLComponents(string: "http://\(trimmedAddress)") else {
-             connectionStatus = "Error: Invalid server address format for fetching models."
+        guard let portForConnection = Int(rawUserPort), portForConnection > 0 && portForConnection <= 65535 else {
+            connectionStatus = "Error: Invalid port number for fetching models."
             isFetchingModels = false
             return
         }
-        components.port = portInt
+        
+        var urlStringForComponents: String
+        if addressForConnection.lowercased().hasPrefix("http://") || addressForConnection.lowercased().hasPrefix("https://") {
+            urlStringForComponents = addressForConnection
+        } else {
+            urlStringForComponents = "http://" + addressForConnection // Default to http
+        }
+        
+        guard var components = URLComponents(string: urlStringForComponents) else {
+            connectionStatus = "Error: Invalid server address format for fetching models."
+            isFetchingModels = false
+            return
+        }
+        
+        components.port = portForConnection // Always use the port from the dedicated field
         components.path = "/api/tags"
 
         guard let url = components.url else {
@@ -279,11 +369,13 @@ struct SettingsView: View {
         request.httpMethod = "GET"
         request.timeoutInterval = 10 // Longer timeout for model list
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
-                isFetchingModels = false
+                self.fetchModelsTask = nil // Clear task reference in completion
+                self.isFetchingModels = false // Ensure this is also set in completion
                 if let error = error {
-                    self.connectionStatus = "Error fetching models: \(error.localizedDescription)"
+                    let nsError = error as NSError
+                    self.connectionStatus = formatErrorMessage(nsError, forModelFetching: true)
                     return
                 }
                 guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
@@ -300,14 +392,71 @@ struct SettingsView: View {
                     if !availableModels.isEmpty && (selectedModelName.isEmpty || !availableModels.contains(where: { $0.name == selectedModelName })) {
                         selectedModelName = availableModels.first?.name ?? ""
                     }
-                    // Update connection status if it was just a generic connected message
-                    if self.connectionStatus.starts(with: "Connected to Ollama") {
-                         self.connectionStatus += " - Models loaded."
+                    
+                    if let version = self.ollamaVersion {
+                        self.connectionStatus = "Connected to Ollama v\(version) - Models loaded."
+                    } else {
+                        self.connectionStatus = "Connected - Models loaded."
                     }
                 } catch {
                     self.connectionStatus = "Error: Could not decode model list."
                 }
             }
         }.resume()
+    }
+
+    // Helper function to reset state when address or port changes
+    private func handleAddressOrPortChange() {
+        // Only mark that changes are pending, don't change actual connectionStatus here
+        hasUnappliedChanges = true
+    }
+
+    // Function to handle disconnecting
+    private func disconnectOllama() {
+        testConnectionTask?.cancel()
+        testConnectionTask = nil
+        fetchModelsTask?.cancel()
+        fetchModelsTask = nil
+
+        isTestingConnection = false
+        isFetchingModels = false
+        hasUnappliedChanges = false
+        connectionStatus = "Disconnected"
+        ollamaVersion = nil
+        availableModels = []
+        // We don't clear ollamaAddress or ollamaPort here, 
+        // so user can easily reconnect or modify slightly.
+    }
+
+    // Helper function to format error messages for the user
+    private func formatErrorMessage(_ error: NSError, forModelFetching: Bool = false) -> String {
+        let prefix = forModelFetching ? "Error fetching models: " : "Error: "
+        var message = ""
+
+        if error.domain == NSURLErrorDomain {
+            switch error.code {
+            case NSURLErrorCannotConnectToHost: // -1004
+                message = prefix + "Connection failed. Ensure Ollama is running at the address/port and check firewall settings."
+            case NSURLErrorTimedOut: // -1001
+                message = prefix + "Connection timed out. Check server responsiveness and network."
+            case NSURLErrorCannotFindHost: // -1003
+                message = prefix + "Cannot find the server. Verify the address."
+            case NSURLErrorNotConnectedToInternet: // -1009
+                message = prefix + "Not connected to the internet. Please check your network."
+            default:
+                message = prefix + "\\(error.localizedDescription) (Domain: \\(error.domain))"
+            }
+        } else if error.domain == NSPOSIXErrorDomain {
+             switch error.code {
+             case 61: // ECONNREFUSED
+                 message = prefix + "Connection refused by server. Ensure Ollama is running and listening."
+             default:
+                message = prefix + "\\(error.localizedDescription) (Domain: \\(error.domain))"
+             }
+        } else {
+            message = prefix + "\\(error.localizedDescription) (Domain: \\(error.domain))"
+        }
+        // Code part removed to avoid interpolation issues
+        return message
     }
 } 
