@@ -300,8 +300,8 @@ struct ContentView: View {
         let streamingMsgID = streamingMsg.id
 
         // Use a custom URLSession with delegate for streaming
-        let session = URLSession(configuration: .default, delegate: StreamingDelegate(update: { id, content, stats, done in
-            updateStreamingMessage(id: id, content: content, stats: stats, done: done)
+        let session = URLSession(configuration: .default, delegate: StreamingDelegate(update: { id, content, stats, done, errorText in
+            updateStreamingMessage(id: id, content: content, stats: stats, done: done, errorText: errorText)
         }, streamingMsgID: streamingMsgID), delegateQueue: nil)
         streamingSession = session
         let task = session.dataTask(with: request)
@@ -309,12 +309,20 @@ struct ContentView: View {
     }
 
     // Helper to update streaming message from delegate
-    func updateStreamingMessage(id: UUID, content: String?, stats: String?, done: Bool) {
+    func updateStreamingMessage(id: UUID, content: String?, stats: String?, done: Bool, errorText: String? = nil) {
         DispatchQueue.main.async {
             guard let idx = chatMessages.firstIndex(where: { $0.id == id }) else { return }
+
+            if let errorText = errorText {
+                chatMessages[idx].content = "Error: \(errorText)"
+                chatMessages[idx].contentType = .text
+                chatMessages[idx].isStreaming = false
+                chatMessages[idx].stats = nil
+                return
+            }
+
             if let content = content {
                 chatMessages[idx].content += content
-                // Update content type based on accumulated content
                 chatMessages[idx].contentType = ChatMessage.detectContentType(chatMessages[idx].content)
             }
             if let stats = stats {
@@ -329,12 +337,12 @@ struct ContentView: View {
 
 // MARK: - Streaming Delegate
 class StreamingDelegate: NSObject, URLSessionDataDelegate {
-    let update: (UUID, String?, String?, Bool) -> Void
+    let update: (UUID, String?, String?, Bool, String?) -> Void
     let streamingMsgID: UUID
     private var buffer = Data()
     private var accumulatedContent = ""
     
-    init(update: @escaping (UUID, String?, String?, Bool) -> Void, streamingMsgID: UUID) {
+    init(update: @escaping (UUID, String?, String?, Bool, String?) -> Void, streamingMsgID: UUID) {
         self.update = update
         self.streamingMsgID = streamingMsgID
     }
@@ -350,9 +358,20 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
         }
     }
     
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            update(streamingMsgID, nil, nil, true, error.localizedDescription)
+        }
+    }
+    
     func processOllamaStreamChunk(_ line: String) {
         guard let data = line.data(using: .utf8) else { return }
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let errorMessage = json["error"] as? String {
+                update(streamingMsgID, nil, nil, true, errorMessage)
+                return
+            }
+
             if let done = json["done"] as? Bool, done {
                 let stats = json["eval_count"].flatMap { "Tokens: \($0)" } ?? ""
                 let speed = json["eval_duration"].flatMap { d in
@@ -362,12 +381,11 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
                     return nil
                 } ?? ""
                 let statsString = [stats, speed].filter { !$0.isEmpty }.joined(separator: " | ")
-                update(streamingMsgID, nil, statsString, true)
+                update(streamingMsgID, nil, statsString, true, nil)
             } else if let response = json["message"] as? [String: Any], let content = response["content"] as? String {
                 accumulatedContent += content
-                // Detect content type from accumulated content
                 let contentType = ChatMessage.detectContentType(accumulatedContent)
-                update(streamingMsgID, content, nil, false)
+                update(streamingMsgID, content, nil, false, nil)
             }
         }
     }
