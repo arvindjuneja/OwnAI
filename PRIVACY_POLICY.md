@@ -1,66 +1,205 @@
-# Privacy Policy for OwnAI
+# Privacy Policy for Vays
 
-**Last Updated:** [Date You Finalize This Policy]
+**Last Updated:** 2026-04-29
 
 ## 1. Introduction
 
-Welcome to OwnAI! This Privacy Policy describes how your information is handled when you use the OwnAI macOS application (the "App"). We are committed to protecting your privacy. This App is designed to operate with your privacy as a priority.
+This Privacy Policy describes how Vays ("the App") handles your data on
+both the **Vays iOS app** and the **Vays macOS app**. Vays is built by a
+solo developer (Arvind Juneja, contact: arvind@oumm.pl) with privacy as
+the default. This policy is written to be specific about what happens
+on each platform; please read the section that applies to you.
 
-## 2. Information We Handle
+The same policy applies to the legacy "OwnAI" macOS app, which has been
+rebranded to Vays. Existing OwnAI users have continued to receive Vays
+as a free update.
 
-The App primarily works with information you provide and stores it locally on your device.
-There is no data transfer to the creators of the app.
+## 2. Summary
 
-**a. Locally Stored Configuration Data:**
+- **No account required.** The App has no login, no user accounts, and
+  no server-side state managed by the developer.
+- **No analytics, no advertising, no tracking SDKs** of any kind.
+- **No data collected by the developer.** Recordings, transcripts,
+  conversations, settings, and API keys never reach servers we control.
+- **All AI runs on-device by default.** Cloud AI is opt-in, available
+  only on macOS, and only when the user enters their own API key.
 
-The App stores the following settings locally on your macOS device using standard macOS storage mechanisms (such as UserDefaults, managed via AppStorage in SwiftUI). This data is stored solely for the App's functionality and your convenience:
+## 3. Data the App Handles, by Platform
 
-*   **Ollama Server Address:** The network address of the Ollama server you configure.
-*   **Ollama Server Port:** The port number for the Ollama server you configure.
-*   **Selected Model Name:** The name of the Ollama model you select for use.
-*   **Appearance Settings:** Preferences such as chat font size, code font size, and line spacing.
+### 3.1 Vays for iPhone & iPad
 
-**We, the developers of OwnAI, do not have access to, collect, or transmit this locally stored configuration data. It remains on your device.**
+**On-device, never leaves the device:**
+- Audio recordings (microphone capture, stored in app sandbox)
+- Transcripts (produced on-device by Apple Neural Engine via Parakeet
+  TDT v3 or, optionally, WhisperKit)
+- AI chat conversations (produced on-device by Gemma 3 E2B, downloaded
+  once from Hugging Face / Apple CDN as read-only model weights)
+- Custom vocabulary, processing preferences, and other settings
 
-**b. Information Transmitted to Your Ollama Server:**
+**Network destinations the iOS app may reach (all opt-in, none of them
+third-party AI services):**
 
-The App connects directly to the Ollama server address and port that **you provide** in the settings. This communication is necessary for the App to:
+1. **Apple iCloud Key-Value Store** — off by default. When the user
+   enables iCloud Sync (Settings → Sync), the App syncs only:
+   - Custom vocabulary terms
+   - Non-secret processing preferences
+   It uses Apple's `NSUbiquitousKeyValueStore`, which is encrypted at
+   rest with the user's Apple ID and never reaches our infrastructure.
+   **Audio, transcripts, conversations, API keys, and saved server
+   hosts are never sent to iCloud.**
 
-*   Test the connection to your Ollama server.
-*   Fetch a list of available models from your Ollama server.
-*   (If applicable to the broader app functionality) Send requests and receive responses from your Ollama server for chat interactions.
+2. **The user's own Mac on the local network** — off by default,
+   requires the user to explicitly pair the iOS app with the Vays Mac
+   app (entering a 6-digit code displayed on the Mac). After pairing,
+   the two devices discover each other via Bonjour (`_vays._tcp`) and
+   exchange memos and transcripts directly over the local network.
+   No third-party server is involved.
 
-**OwnAI does not control the Ollama server you connect to. You are responsible for the privacy and security of your own Ollama instance and any data it may collect or log according to its own configuration and policies.**
+3. **Optional Ollama provider** — only available when paired with the
+   user's own Mac running Ollama. When the user explicitly selects
+   Ollama as the chat provider in the iOS chat picker, chat messages
+   travel over the local network to the Ollama instance running on the
+   user's Mac. Ollama itself runs entirely on-device on the user's Mac;
+   no cloud component is involved.
 
-**c. No Personal Data Collected by the Developer:**
+4. **One-time read-only model downloads** — on first use, the App
+   downloads on-device AI model weights (Gemma 3 E2B and, optionally,
+   WhisperKit models) from Hugging Face / Apple CDNs over standard
+   HTTPS. These are read-only file transfers; no user content is
+   uploaded.
 
-Beyond the locally stored settings described above, OwnAI does not collect, store, or transmit any personal information, analytics, or tracking data about you or your usage of the App.
+**The iOS app does not send user data to any third-party AI service.**
+There is no UI on iOS for entering an OpenAI (or any cloud AI provider)
+API key. OpenAI integration is exclusive to the macOS companion app
+(see Section 3.2).
 
-## 3. Data Sharing and Disclosure
+### 3.2 Vays for Mac
 
-OwnAI does not share any of your information with third parties.
+The Mac app's default behavior is on-device, identical to iOS in
+spirit: transcription via WhisperKit / Parakeet on Apple Neural Engine,
+AI chat via locally-running Gemma. In addition, the Mac app offers
+**optional integrations with cloud and local AI services that the user
+must explicitly enable**:
 
-The only "sharing" of data that occurs is when the App communicates directly with the Ollama server **you have configured**, as described in section 2b. This is not sharing with an external third party from the perspective of the App's developer, but rather a direct interaction between the App (acting on your behalf) and your own server.
+1. **OpenAI (cloud, optional, requires user's own API key).** The Mac
+   user can enter their own OpenAI API key in Settings → Chat. When the
+   OpenAI provider is selected from the chat picker, the App sends the
+   user's chat messages — and any explicitly attached note text — to
+   OpenAI's API endpoint (`api.openai.com`) over HTTPS. The API key is
+   stored locally in the user's preferences and is never transmitted to
+   our infrastructure or to iCloud.
 
-## 4. Data Storage and Security
+   **What is sent to OpenAI**: chat messages, attached note text (only
+   if the user attaches a note), and the system prompt. **What is not
+   sent**: audio, transcripts other than text the user has chosen to
+   include, settings, or anything else about the user's account or
+   device.
 
-All configuration data used by OwnAI is stored locally on your macOS device. You have control over this data:
+   **Who the data goes to**: OpenAI, L.L.C. The data handling, retention,
+   and use practices of OpenAI are governed by **OpenAI's own privacy
+   policy** at https://openai.com/policies/privacy-policy. OpenAI is a
+   third-party service we do not control. Per OpenAI's own published
+   policy at the time of writing, API requests are not used for model
+   training by default. The user is encouraged to review OpenAI's
+   policy before enabling this provider.
 
-*   You can view and modify these settings directly within the App.
-*   You can typically remove this data by deleting the App and its associated preference files from your system.
+2. **Ollama (local, optional, user's own server).** The Mac user can
+   point the App at any Ollama instance reachable on the local network
+   or via a custom URL. When Ollama is selected, chat messages travel
+   to the Ollama URL the user specified. The user is responsible for
+   the privacy of the Ollama instance they connect to.
 
-While we strive to build a secure application, the security of the data stored on your local device and the security of your Ollama server are your responsibilities.
+3. **Apple iCloud Key-Value Store** — same as iOS. Off by default;
+   syncs only vocabulary and non-secret preferences when enabled.
 
-## 5. Children's Privacy
+4. **Cross-device pairing with iOS** — same Bonjour mechanism as
+   described in Section 3.1, from the Mac side.
 
-OwnAI is not intended for use by children under the age of 13 (or the equivalent minimum age in your jurisdiction). We do not knowingly collect any personal information from children. If you believe we might have any information from or about a child, please contact us.
+5. **Accessibility framework usage** — the Mac app's "Voice Input
+   Assistance" (Dictate Mode) feature uses the macOS Accessibility
+   framework (`AXIsProcessTrustedWithOptions` and
+   `CGEventKeyboardSetUnicodeString`) to insert dictated text into the
+   focused field of the active app, after the user has explicitly
+   granted Accessibility permission via System Settings. The
+   Accessibility framework is used only for this assistive-input
+   purpose and only after explicit user consent. **No data is
+   exfiltrated; no contents of other apps' fields are read.**
 
-## 6. Changes to This Privacy Policy
+## 4. Permissions Requested
 
-We may update this Privacy Policy from time to time. If we make changes, we will notify you by revising the "Last Updated" date at the top of this policy. We may also provide notice through the App or its App Store page. We encourage you to review this Privacy Policy periodically to stay informed about our information practices.
+### iOS
 
-## 7. Contact Us
+- **Microphone** — for recording voice memos and Quick Tasks. Audio is
+  used only on-device for recording and transcription.
+- **Speech Recognition** (optional, only if the user enables Apple's
+  on-device live transcription) — used for real-time live transcription
+  via Apple's `SFSpeechRecognizer`. We configure the recognizer to
+  prefer on-device recognition where supported.
+- **Local Network** — for Bonjour discovery of the user's own Mac
+  during pairing.
+- **Reminders** (optional, requested only if the user uses the "Save
+  Quick Task to Reminders" feature).
+- **Photos** (optional, requested only if the user attaches an image
+  to a chat message).
 
-If you have any questions about this Privacy Policy, please contact us at:
+### macOS
 
-arvind@oumm.pl
+- **Microphone** — for recording voice memos.
+- **Speech Recognition** (optional, see iOS).
+- **Local Network** — for Bonjour discovery of paired iOS devices.
+- **Calendars** (optional, requested only when the user attempts to
+  read calendar context).
+- **Accessibility** (optional, requested when the user enables Voice
+  Input Assistance / Dictate Mode). Used solely to insert dictated
+  text into the focused text field of the active app.
+
+## 5. Data Sharing and Disclosure
+
+The developer does not share any user data with third parties. The
+only outbound network destinations from the App are listed in
+Section 3, and each is either:
+
+- The user's own infrastructure (their Mac, their Ollama server, their
+  iCloud Key-Value Store), or
+- Apple-operated infrastructure with a documented privacy posture
+  (iCloud KVS, Apple Speech Recognition, Apple/Hugging Face model
+  CDNs), or
+- A cloud provider the user has explicitly configured with their own
+  API key (OpenAI, on macOS only).
+
+The developer has no business relationship with OpenAI; the user
+contracts directly with OpenAI when they enter their own API key. The
+developer does not receive any data the user sends to OpenAI.
+
+## 6. Data Retention and Deletion
+
+All recordings, transcripts, conversations, and settings are stored
+locally on the user's device(s) and remain there until the user
+deletes them or uninstalls the App. Deleting the App removes all
+locally stored data. Disabling iCloud Sync stops further syncs but
+does not, by itself, remove already-synced vocabulary or preferences
+from iCloud — the user can clear those via Apple's iCloud management.
+
+We do not retain any user data, because we do not collect any.
+
+## 7. Children's Privacy
+
+The App is rated 4+ and contains no objectionable content. It is not
+directed to children, and we do not knowingly collect any personal
+information from anyone, including children. If a parent or guardian
+believes information has been provided in error, please contact us.
+
+## 8. Changes to This Privacy Policy
+
+We may update this Privacy Policy from time to time. Material changes
+will be reflected in the "Last Updated" date at the top of this
+policy. We may also notify users via in-app messaging or App Store
+release notes for substantive changes.
+
+## 9. Contact
+
+Questions about this Privacy Policy can be sent to:
+
+**arvind@oumm.pl**
+
+Arvind Juneja, sole developer of Vays.
